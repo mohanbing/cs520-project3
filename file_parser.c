@@ -2,10 +2,6 @@
  * file_parser.c
  * Contains functions to parse input file and create code memory, you can edit
  * this file to add new instructions
- *
- * Author:
- * Copyright (c) 2020, Gaurav Kothari (gkothar1@binghamton.edu)
- * State University of New York at Binghamton
  */
 #include <assert.h>
 #include <stdio.h>
@@ -104,11 +100,42 @@ set_opcode_str(const char *opcode_str)
         return OPCODE_BNZ;
     }
 
-    if (strcmp(opcode_str, "HALT") == 0)
+    if (strcmp(opcode_str, "HALT") == 0 || strcmp(opcode_str, "HALT\n") == 0)
     {
         return OPCODE_HALT;
     }
 
+    if (strcmp(opcode_str, "ADDL") == 0)
+    {
+        return OPCODE_ADDL;
+    }
+
+    if (strcmp(opcode_str, "SUBL") == 0)
+    {
+        return OPCODE_SUBL;
+    }
+
+    if(strcmp(opcode_str, "LDR") == 0)
+    {
+        return OPCODE_LDR;
+    }
+
+    if(strcmp(opcode_str, "STR") == 0)
+    {
+        return OPCODE_STR;
+    }
+
+    if(strcmp(opcode_str, "NOP\n") == 0)
+    {
+        return OPCODE_NOP;
+    }
+
+    if(strcmp(opcode_str, "CMP") == 0)
+    {
+        return OPCODE_CMP;
+    }
+    
+    printf("%s", opcode_str);
     assert(0 && "Invalid opcode");
     return 0;
 }
@@ -158,15 +185,71 @@ create_APEX_instruction(APEX_Instruction *ins, char *buffer)
 
     strcpy(ins->opcode_str, top_level_tokens[0]);
     ins->opcode = set_opcode_str(ins->opcode_str);
-
+    ins->rs3 = -1;
     switch (ins->opcode)
     {
         case OPCODE_ADD:
+        {
+            ins->rd = get_num_from_string(tokens[0]);
+            ins->rs1 = get_num_from_string(tokens[1]);
+            ins->rs2 = get_num_from_string(tokens[2]);
+            break;
+        }
+
+        case OPCODE_ADDL:
+        {
+            ins->rd = get_num_from_string(tokens[0]);
+            ins->rs1 = get_num_from_string(tokens[1]);
+            ins->imm = get_num_from_string(tokens[2]);
+            ins->rs2 = -1;
+            break;
+        }
+
         case OPCODE_SUB:
+        {
+            ins->rd = get_num_from_string(tokens[0]);
+            ins->rs1 = get_num_from_string(tokens[1]);
+            ins->rs2 = get_num_from_string(tokens[2]);
+            break;
+        }
+
+        case OPCODE_SUBL:
+        {
+            ins->rd = get_num_from_string(tokens[0]);
+            ins->rs1 = get_num_from_string(tokens[1]);
+            ins->imm = get_num_from_string(tokens[2]);
+            ins->rs2 = -1;
+            break;
+        }
+
         case OPCODE_MUL:
+        {
+            ins->rd = get_num_from_string(tokens[0]);
+            ins->rs1 = get_num_from_string(tokens[1]);
+            ins->rs2 = get_num_from_string(tokens[2]);
+            break;
+        }
         case OPCODE_DIV:
+        {
+            ins->rd = get_num_from_string(tokens[0]);
+            ins->rs1 = get_num_from_string(tokens[1]);
+            ins->rs2 = get_num_from_string(tokens[2]);
+            break;
+        }
         case OPCODE_AND:
+        {
+            ins->rd = get_num_from_string(tokens[0]);
+            ins->rs1 = get_num_from_string(tokens[1]);
+            ins->rs2 = get_num_from_string(tokens[2]);
+            break;
+        }
         case OPCODE_OR:
+        {
+            ins->rd = get_num_from_string(tokens[0]);
+            ins->rs1 = get_num_from_string(tokens[1]);
+            ins->rs2 = get_num_from_string(tokens[2]);
+            break;
+        }
         case OPCODE_XOR:
         {
             ins->rd = get_num_from_string(tokens[0]);
@@ -179,6 +262,8 @@ create_APEX_instruction(APEX_Instruction *ins, char *buffer)
         {
             ins->rd = get_num_from_string(tokens[0]);
             ins->imm = get_num_from_string(tokens[1]);
+            ins->rs1 = -1;
+            ins->rs2 = -1;
             break;
         }
 
@@ -187,21 +272,73 @@ create_APEX_instruction(APEX_Instruction *ins, char *buffer)
             ins->rd = get_num_from_string(tokens[0]);
             ins->rs1 = get_num_from_string(tokens[1]);
             ins->imm = get_num_from_string(tokens[2]);
+            ins->rs2 = -1;
+            break;
+        }
+
+        case OPCODE_LDR:
+        {
+            ins->rd = get_num_from_string(tokens[0]);
+            ins->rs1 = get_num_from_string(tokens[1]);
+            ins->rs2 = get_num_from_string(tokens[2]);
             break;
         }
 
         case OPCODE_STORE:
         {
+            ins->rd=-1;
             ins->rs1 = get_num_from_string(tokens[0]);
             ins->rs2 = get_num_from_string(tokens[1]);
             ins->imm = get_num_from_string(tokens[2]);
             break;
         }
 
+        case OPCODE_STR:
+        {
+            ins->rd = -1;
+            ins->rs3 = get_num_from_string(tokens[0]);
+            ins->rs1 = get_num_from_string(tokens[1]);
+            ins->rs2 = get_num_from_string(tokens[2]);
+            break;
+        }
+
         case OPCODE_BZ:
+        {
+            ins->rd=-1;
+            ins->rs1=-1;
+            ins->rs2=-1;
+            ins->imm = get_num_from_string(tokens[0]);
+            break;
+        }
         case OPCODE_BNZ:
         {
+            ins->rd=-1;
+            ins->rs1=-1;
+            ins->rs2=-1;
             ins->imm = get_num_from_string(tokens[0]);
+            break;
+        }
+        case OPCODE_CMP:
+        {
+            ins->rs1 = get_num_from_string(tokens[0]);
+            ins->rs2 = get_num_from_string(tokens[1]);
+            ins->rd=-1;
+            break;
+        }
+        case OPCODE_NOP:
+        {
+            ins->rs1=-1;
+            ins->rs2=-1;
+            ins->rd=-1;
+            ins->rs3=-1;
+            break;
+        }
+        case OPCODE_HALT:
+        {
+            ins->rs1=-1;
+            ins->rs2=-1;
+            ins->rd=-1;
+            ins->rs3=-1;
             break;
         }
     }
