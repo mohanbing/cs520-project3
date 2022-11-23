@@ -256,7 +256,7 @@ APEX_fetch(APEX_CPU *cpu)
  * Note: You are free to edit this function according to your implementation
  */
 static void
-APEX_decode(APEX_CPU *cpu)
+APEX_decode_rename1(APEX_CPU *cpu)
 {
     if (cpu->decode.has_insn)
     {
@@ -513,9 +513,27 @@ APEX_cpu_init(const char *filename)
 
     /* Initialize PC, Registers and all pipeline stages */
     cpu->pc = 4000;
-    memset(cpu->regs, 0, sizeof(int) * REG_FILE_SIZE);
     memset(cpu->data_memory, 0, sizeof(int) * DATA_MEMORY_SIZE);
     cpu->single_step = ENABLE_SINGLE_STEP;
+
+    int i;
+    for(i=0; i<PHY_REG_FILE_SIZE; i++)
+    {
+        cpu->phy_regs[i] = malloc(sizeof(APEX_PHY_REG));
+        cpu->phy_regs[i]->reg_flag = -1;
+        cpu->phy_regs[i]->reg_value = 0;
+        cpu->phy_regs[i]->reg_tag = i;
+    }
+
+    for(i=8; i<ARCH_REG_FILE_SIZE; i++)
+    {
+        cpu->free_list[i] = i;
+    }
+
+    for(i=0; i<PHY_REG_FILE_SIZE; i++)
+    {
+        cpu->rename_table[i] = i;
+    }
 
     /* Parse input file and create code memory */
     cpu->code_memory = create_code_memory(filename, &cpu->code_memory_size);
