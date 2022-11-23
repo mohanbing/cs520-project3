@@ -2,9 +2,6 @@
  * apex_cpu.c
  * Contains APEX cpu pipeline implementation
  *
- * Author:
- * Copyright (c) 2020, Gaurav Kothari (gkothar1@binghamton.edu)
- * State University of New York at Binghamton
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,16 +21,74 @@ get_code_memory_index_from_pc(const int pc)
 }
 
 static void
+print_data_memory(APEX_CPU *cpu)
+{
+    printf("================STATE OF DATA MEMORY (Printing only non-zero memory locations)================\n");
+    int i;
+    for(i=0; i<4000; i++)
+    {
+        if(cpu->data_memory[i]!=0)
+            printf("| \t MEM[%d] \t | \t Data Value = %d \t |\n", i, cpu->data_memory[i]);
+    }
+}
+
+static void
 print_instruction(const CPU_Stage *stage)
 {
     switch (stage->opcode)
     {
         case OPCODE_ADD:
+        {
+            printf("%s,R%d,R%d,R%d ", stage->opcode_str, stage->rd, stage->rs1,
+                   stage->rs2);
+            break;
+        }
+
+        case OPCODE_ADDL:
+        {
+            printf("%s,R%d,R%d,#%d ", stage->opcode_str, stage->rd, stage->rs1,
+                   stage->imm);
+            break;
+        }
+
         case OPCODE_SUB:
+        {
+            printf("%s,R%d,R%d,R%d ", stage->opcode_str, stage->rd, stage->rs1,
+                   stage->rs2);
+            break;
+        }
+
+        case OPCODE_SUBL:
+        {
+            printf("%s,R%d,R%d,#%d ", stage->opcode_str, stage->rd, stage->rs1,
+                   stage->imm);
+            break;
+        }
+
         case OPCODE_MUL:
+        {
+            printf("%s,R%d,R%d,R%d ", stage->opcode_str, stage->rd, stage->rs1,
+                   stage->rs2);
+            break;
+        }
         case OPCODE_DIV:
+        {
+            printf("%s,R%d,R%d,R%d ", stage->opcode_str, stage->rd, stage->rs1,
+                   stage->rs2);
+            break;
+        }
         case OPCODE_AND:
+        {
+            printf("%s,R%d,R%d,R%d ", stage->opcode_str, stage->rd, stage->rs1,
+                   stage->rs2);
+            break;
+        }
         case OPCODE_OR:
+        {
+            printf("%s,R%d,R%d,R%d ", stage->opcode_str, stage->rd, stage->rs1,
+                   stage->rs2);
+            break;
+        }
         case OPCODE_XOR:
         {
             printf("%s,R%d,R%d,R%d ", stage->opcode_str, stage->rd, stage->rs1,
@@ -54,6 +109,13 @@ print_instruction(const CPU_Stage *stage)
             break;
         }
 
+        case OPCODE_LDR:
+        {
+            printf("%s,R%d,R%d,#%d ", stage->opcode_str, stage->rd, stage->rs1,
+                   stage->rs2);
+            break;
+        }
+
         case OPCODE_STORE:
         {
             printf("%s,R%d,R%d,#%d ", stage->opcode_str, stage->rs1, stage->rs2,
@@ -61,7 +123,18 @@ print_instruction(const CPU_Stage *stage)
             break;
         }
 
+        case OPCODE_STR:
+        {
+            printf("%s,R%d,R%d,R%d ", stage->opcode_str, stage->rs3, stage->rs1,
+                   stage->rs2);
+            break;
+        }
+
         case OPCODE_BZ:
+        {
+            printf("%s,#%d ", stage->opcode_str, stage->imm);
+            break;
+        }
         case OPCODE_BNZ:
         {
             printf("%s,#%d ", stage->opcode_str, stage->imm);
@@ -71,6 +144,19 @@ print_instruction(const CPU_Stage *stage)
         case OPCODE_HALT:
         {
             printf("%s", stage->opcode_str);
+            break;
+        }
+
+        case OPCODE_NOP:
+        {
+            printf("%s", stage->opcode_str);
+            break;
+        }
+
+        case OPCODE_CMP:
+        {
+            printf("%s,R%d,R%d ", stage->opcode_str, stage->rs1,
+                   stage->rs2);
             break;
         }
     }
@@ -83,8 +169,15 @@ print_instruction(const CPU_Stage *stage)
 static void
 print_stage_content(const char *name, const CPU_Stage *stage)
 {
-    printf("%-15s: pc(%d) ", name, stage->pc);
-    print_instruction(stage);
+    if(stage!=NULL)
+    {
+        printf("%-15s: I%d: (%d) ", name, ((stage->pc-4000)/4)+1,stage->pc);
+        print_instruction(stage);
+    }
+    else
+    {
+        printf("%-15s: EMPTY", name);
+    }
     printf("\n");
 }
 
@@ -95,23 +188,13 @@ print_stage_content(const char *name, const CPU_Stage *stage)
 static void
 print_reg_file(const APEX_CPU *cpu)
 {
+    printf("----------\n%s\n----------\n", "State of Architectural Register File");
     int i;
-
-    printf("----------\n%s\n----------\n", "Registers:");
-
-    for (int i = 0; i < REG_FILE_SIZE / 2; ++i)
+    for (i = 0; i < REG_FILE_SIZE ; ++i)
     {
-        printf("R%-3d[%-3d] ", i, cpu->regs[i]);
+        printf("R%-3d\tValue:[%-3d]", i, cpu->regs[i]);
+        printf("\n");
     }
-
-    printf("\n");
-
-    for (i = (REG_FILE_SIZE / 2); i < REG_FILE_SIZE; ++i)
-    {
-        printf("R%-3d[%-3d] ", i, cpu->regs[i]);
-    }
-
-    printf("\n");
 }
 
 /*

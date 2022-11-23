@@ -2,9 +2,6 @@
  * apex_cpu.h
  * Contains APEX cpu pipeline declarations
  *
- * Author:
- * Copyright (c) 2020, Gaurav Kothari (gkothar1@binghamton.edu)
- * State University of New York at Binghamton
  */
 #ifndef _APEX_CPU_H_
 #define _APEX_CPU_H_
@@ -19,6 +16,7 @@ typedef struct APEX_Instruction
     int rd;
     int rs1;
     int rs2;
+    int rs3;
     int imm;
 } APEX_Instruction;
 
@@ -30,10 +28,12 @@ typedef struct CPU_Stage
     int opcode;
     int rs1;
     int rs2;
+    int rs3;
     int rd;
     int imm;
     int rs1_value;
     int rs2_value;
+    int rs3_value;
     int result_buffer;
     int memory_address;
     int has_insn;
