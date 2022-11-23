@@ -39,13 +39,20 @@ typedef struct CPU_Stage
     int has_insn;
 } CPU_Stage;
 
+typedef struct APEX_PHY_REG
+{
+    int reg_tag;
+    int reg_value;
+    int reg_flag;
+} APEX_PHY_REG;
+
 /* Model of APEX CPU */
 typedef struct APEX_CPU
 {
     int pc;                        /* Current program counter */
     int clock;                     /* Clock cycles elapsed */
     int insn_completed;            /* Instructions retired */
-    int regs[REG_FILE_SIZE];       /* Integer register file */
+    
     int code_memory_size;          /* Number of instruction in the input file */
     APEX_Instruction *code_memory; /* Code Memory */
     int data_memory[DATA_MEMORY_SIZE]; /* Data Memory */
@@ -53,12 +60,16 @@ typedef struct APEX_CPU
     int zero_flag;                 /* {TRUE, FALSE} Used by BZ and BNZ to branch */
     int fetch_from_next_cycle;
 
+    int arch_regs[ARCH_REG_FILE_SIZE];       /* Integer register file */
+    APEX_PHY_REG *phy_regs[PHY_REG_FILE_SIZE];
+
+    int free_list[PHY_REG_FILE_SIZE];
+    int rename_table[PHY_REG_FILE_SIZE];
+
     /* Pipeline stages */
     CPU_Stage fetch;
-    CPU_Stage decode;
-    CPU_Stage execute;
-    CPU_Stage memory;
-    CPU_Stage writeback;
+    CPU_Stage decode_rename1;
+
 } APEX_CPU;
 
 APEX_Instruction *create_code_memory(const char *filename, int *size);

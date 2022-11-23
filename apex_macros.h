@@ -13,7 +13,8 @@
 #define DATA_MEMORY_SIZE 4096
 
 /* Size of integer register file */
-#define REG_FILE_SIZE 16
+#define ARCH_REG_FILE_SIZE 8
+#define PHY_REG_FILE_SIZE 15
 
 /* Numeric OPCODE identifiers for instructions */
 #define OPCODE_ADD 0x0
