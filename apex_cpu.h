@@ -29,7 +29,11 @@ typedef struct CPU_Stage
     int rs1;
     int rs2;
     int rs3;
+    int renamed_rs1;
+    int renamed_rs2;
+    int renamed_rs3;
     int rd;
+    int renamed_rd;
     int imm;
     int rs1_value;
     int rs2_value;
@@ -65,10 +69,13 @@ typedef struct APEX_CPU
 
     int free_list[PHY_REG_FILE_SIZE];
     int rename_table[PHY_REG_FILE_SIZE];
+    int free_list_head;
+    int free_list_tail;
 
     /* Pipeline stages */
     CPU_Stage fetch;
     CPU_Stage decode_rename1;
+    CPU_Stage rename2_dispatch;
 
 } APEX_CPU;
 
