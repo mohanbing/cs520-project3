@@ -159,6 +159,13 @@ print_instruction(const CPU_Stage *stage)
                    stage->rs2);
             break;
         }
+
+        case OPCODE_JUMP:
+        {
+            printf("%s,R%d,#%d ", stage->opcode_str, stage->rs1,
+                   stage->imm);
+            break;
+        }
     }
 }
 
