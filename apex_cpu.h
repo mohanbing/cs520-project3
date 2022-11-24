@@ -71,6 +71,7 @@ typedef struct APEX_CPU
     int rename_table[PHY_REG_FILE_SIZE];
     int free_list_head;
     int free_list_tail;
+    int rename_stall;
 
     /* Pipeline stages */
     CPU_Stage fetch;
