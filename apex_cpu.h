@@ -6,6 +6,7 @@
 #ifndef _APEX_CPU_H_
 #define _APEX_CPU_H_
 
+#include<stdbool.h>
 #include "apex_macros.h"
 
 /* Format of an APEX instruction  */
@@ -46,6 +47,19 @@ typedef struct APEX_PHY_REG
     int reg_flag;
 } APEX_PHY_REG;
 
+typedef struct ROB_ENTRY
+{
+    int establised_bit;             //rob entry established bit
+    char instruction_type[128];     //
+    int pc;                         //program counter
+    int physical_rd;                //physical register destination
+    int overwritten_entry;          //overwritten rename table entry
+    int architectural_rd;           //destination: architectural register
+    int lsq_index;                  //
+    int mem_error_code;             //
+    int dcache_bit;                 //dcache accessed bit
+}ROB_ENTRY;
+
 /* Model of APEX CPU */
 typedef struct APEX_CPU
 {
@@ -65,6 +79,11 @@ typedef struct APEX_CPU
 
     int free_list[PHY_REG_FILE_SIZE];
     int rename_table[PHY_REG_FILE_SIZE];
+    
+    //ROB entries
+    ROB_ENTRY *ROB[ROB_SIZE];
+    int rob_head;
+    int rob_tail;
 
     /* Pipeline stages */
     CPU_Stage fetch;

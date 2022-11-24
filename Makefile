@@ -20,7 +20,8 @@ PROGS= apex_sim
 all: clean $(PROGS) 
 
 # Add all object files to be linked in sequence
-APEX_OBJS:=file_parser.o apex_cpu.o main.o
+# APEX_OBJS:=file_parser.o apex_cpu.o main.o rob.o
+APEX_OBJS:= file_parser.o apex_cpu.o rob.o main.o
 
 apex_sim: $(APEX_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
