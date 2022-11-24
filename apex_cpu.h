@@ -7,6 +7,9 @@
 #define _APEX_CPU_H_
 
 #include "apex_macros.h"
+#include "apex_iq.h"
+
+ #define No_of_IQ_Entry 8
 
 /* Format of an APEX instruction  */
 typedef struct APEX_Instruction
@@ -39,6 +42,36 @@ typedef struct CPU_Stage
     int has_insn;
 } CPU_Stage;
 
+typedef struct IQ_Entry
+{
+    int pc;
+    char opcode_str[128];
+    int counter;
+    int free;
+    char fu_type[128];
+    int imm;
+
+    //use it for arch register
+    int rs1;
+    int rs2;
+    int rd;
+
+    APEX_PHY_REG *prs1;
+    APEX_PHY_REG *prs2;
+
+    int rd;
+
+    int lsqindex;
+    int robindex;
+}IQ_Entry;
+
+typedef struct IQ
+{
+    int iq_free; // flag if iq is free or not
+    IQ_Entry iq_entry[No_of_IQ_Entry];
+}IQ;
+
+
 typedef struct APEX_PHY_REG
 {
     int reg_tag;
@@ -65,6 +98,9 @@ typedef struct APEX_CPU
 
     int free_list[PHY_REG_FILE_SIZE];
     int rename_table[PHY_REG_FILE_SIZE];
+
+    //iq
+    IQ_Entry *iq_fifo[12];
 
     /* Pipeline stages */
     CPU_Stage fetch;
