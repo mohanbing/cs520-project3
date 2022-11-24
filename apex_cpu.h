@@ -46,6 +46,29 @@ typedef struct APEX_PHY_REG
     int reg_flag;
 } APEX_PHY_REG;
 
+typedef struct LSQ_Entry
+{
+    int lsq_estd;
+    int opcode;
+    int pc;
+    int load_str;
+    int mem_addr_valid;
+    int mem_addr;
+
+    int rob_idx;
+
+    int renamed_rs1;
+    int renamed_rs1_value_valid;
+    int renamed_rs1_value;
+
+    int renamed_rs2;
+    int renamed_rs2_value_valid;
+    int renamed_rs2_value;
+
+    int renamed_rd;
+    int dest_type;
+}LSQ_Entry;
+
 /* Model of APEX CPU */
 typedef struct APEX_CPU
 {
@@ -65,6 +88,10 @@ typedef struct APEX_CPU
 
     int free_list[PHY_REG_FILE_SIZE];
     int rename_table[PHY_REG_FILE_SIZE];
+
+    LSQ_Entry *lsq[LSQ_SIZE];
+    int lsq_head;
+    int lsq_tail;
 
     /* Pipeline stages */
     CPU_Stage fetch;
