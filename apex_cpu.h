@@ -54,17 +54,12 @@ typedef struct IQ_Entry
     int free;
     char fu_type[128];
     int imm;
-
     //use it for arch register
     int rs1;
     int rs2;
     int rd;
-
     APEX_PHY_REG *prs1;
     APEX_PHY_REG *prs2;
-
-    int rd;
-
     int lsqindex;
     int robindex;
 }IQ_Entry;
@@ -107,7 +102,8 @@ typedef struct APEX_CPU
     int rename_stall;
 
     //iq
-    IQ_Entry *iq_fifo[12];
+    // IQ_Entry *iq_fifo[No_of_IQ_Entry];
+    IQ iq_fifo;
 
     /* Pipeline stages */
     CPU_Stage fetch;

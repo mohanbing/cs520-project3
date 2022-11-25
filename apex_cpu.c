@@ -217,7 +217,7 @@ print_arch_reg_file(const APEX_CPU *cpu)
     int i;
     for (i = 0; i < ARCH_REG_FILE_SIZE ; ++i)
     {
-        printf("R%-3d\tValue:[%-3d]", i, cpu->arch_regs[i];
+        printf("R%-3d\tValue:[%-3d]", i, cpu->arch_regs[i]);
         printf("\n");
     }
 }
