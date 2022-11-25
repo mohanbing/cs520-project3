@@ -10,6 +10,7 @@
 #include "apex_cpu.h"
 #include "lsq.h"
 #include "apex_macros.h"
+#include "rob.h"
 
 /* Converts the PC(4000 series) into array index for code memory
  *

@@ -6,8 +6,8 @@
 #ifndef _APEX_CPU_H_
 #define _APEX_CPU_H_
 
+#include<stdbool.h>
 #include "apex_macros.h"
-#include <stdbool.h>
 
 #define No_of_IQ_Entry 8
 
@@ -104,6 +104,19 @@ typedef struct LSQ_Entry
     int dest_type;
 }LSQ_Entry;
 
+typedef struct ROB_ENTRY
+{
+    int establised_bit;             //rob entry established bit
+    int instruction_type;           //store opcode, can be used during commit
+    int pc;                         //program counter
+    int physical_rd;                //physical register destination    
+    int architectural_rd;           //destination: architectural register
+    int lsq_index;                  //load store queue index    
+    int dcache_bit;                 //dcache accessed bit
+    // int overwritten_entry;       //overwritten rename table entry; not needed
+    //int mem_error_code;           //
+}ROB_ENTRY;
+
 /* Model of APEX CPU */
 typedef struct APEX_CPU
 {
@@ -138,6 +151,11 @@ typedef struct APEX_CPU
     LSQ_Entry *lsq[LSQ_SIZE];
     int lsq_head;
     int lsq_tail;
+
+    //ROB entries
+    ROB_ENTRY *rob[ROB_SIZE];
+    int rob_head;
+    int rob_tail;
 
     /* Pipeline stages */
     CPU_Stage fetch;

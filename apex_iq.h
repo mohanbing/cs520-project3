@@ -1,3 +1,4 @@
+
 int check_iq(APEX_CPU *cpu); // iq is free or not
 
 int insert_iq_entry(APEX_CPU* cpu,IQ_Entry* iq_entry); //insert in iq
