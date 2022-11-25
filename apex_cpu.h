@@ -85,14 +85,14 @@ typedef struct APEX_PHY_REG
 typedef struct ROB_ENTRY
 {
     int establised_bit;             //rob entry established bit
-    int instruction_type;     //
+    int instruction_type;           //store opcode, can be used during commit
     int pc;                         //program counter
-    int physical_rd;                //physical register destination
-    int overwritten_entry;          //overwritten rename table entry
+    int physical_rd;                //physical register destination    
     int architectural_rd;           //destination: architectural register
-    int lsq_index;                  //
-    int mem_error_code;             //
+    int lsq_index;                  //load store queue index    
     int dcache_bit;                 //dcache accessed bit
+    // int overwritten_entry;       //overwritten rename table entry; not needed
+    //int mem_error_code;           //
 }ROB_ENTRY;
 
 /* Model of APEX CPU */
@@ -122,7 +122,7 @@ typedef struct APEX_CPU
     IQ_Entry *iq_fifo[12];
 
     //ROB entries
-    ROB_ENTRY *ROB[ROB_SIZE];
+    ROB_ENTRY *rob[ROB_SIZE];
     int rob_head;
     int rob_tail;
 
