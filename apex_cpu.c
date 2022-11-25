@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "apex_cpu.h"
+#include "lsq.h"
 #include "apex_macros.h"
 
 /* Converts the PC(4000 series) into array index for code memory
@@ -646,57 +647,6 @@ APEX_rename2_dispatch(APEX_CPU *cpu)
 }
 
 /*
- * Writeback Stage of APEX Pipeline
- *
- * Note: You are free to edit this function according to your implementation
- */
-static int
-APEX_writeback(APEX_CPU *cpu)
-{
-    if (cpu->writeback.has_insn)
-    {
-        /* Write result to register file based on instruction type */
-        switch (cpu->writeback.opcode)
-        {
-            case OPCODE_ADD:
-            {
-                cpu->regs[cpu->writeback.rd] = cpu->writeback.result_buffer;
-                break;
-            }
-
-            case OPCODE_LOAD:
-            {
-                cpu->regs[cpu->writeback.rd] = cpu->writeback.result_buffer;
-                break;
-            }
-
-            case OPCODE_MOVC: 
-            {
-                cpu->regs[cpu->writeback.rd] = cpu->writeback.result_buffer;
-                break;
-            }
-        }
-
-        cpu->insn_completed++;
-        cpu->writeback.has_insn = FALSE;
-
-        if (ENABLE_DEBUG_MESSAGES)
-        {
-            print_stage_content("Writeback", &cpu->writeback);
-        }
-
-        if (cpu->writeback.opcode == OPCODE_HALT)
-        {
-            /* Stop the APEX simulator */
-            return TRUE;
-        }
-    }
-
-    /* Default */
-    return 0;
-}
-
-/*
  * This function creates and initializes APEX cpu.
  *
  * Note: You are free to edit this function according to your implementation
@@ -724,7 +674,6 @@ APEX_cpu_init(const char *filename)
     memset(cpu->data_memory, 0, sizeof(int) * DATA_MEMORY_SIZE);
     cpu->single_step = ENABLE_SINGLE_STEP;
 
-    int i;
     for(i=0; i<PHY_REG_FILE_SIZE; i++)
     {
         cpu->phy_regs[i] = malloc(sizeof(APEX_PHY_REG));
@@ -742,6 +691,9 @@ APEX_cpu_init(const char *filename)
     {
         cpu->rename_table[i] = i;
     }
+
+    cpu->lsq_head = 0;
+    cpu->lsq_tail = 0;
 
     /* Parse input file and create code memory */
     cpu->code_memory = create_code_memory(filename, &cpu->code_memory_size);
@@ -793,19 +745,9 @@ APEX_cpu_run(APEX_CPU *cpu)
             printf("--------------------------------------------\n");
         }
 
-        if (APEX_writeback(cpu))
-        {
-            /* Halt in writeback stage */
-            printf("APEX_CPU: Simulation Complete, cycles = %d instructions = %d\n", cpu->clock, cpu->insn_completed);
-            break;
-        }
-
-        APEX_memory(cpu);
-        APEX_execute(cpu);
-        APEX_decode(cpu);
         APEX_fetch(cpu);
 
-        print_reg_file(cpu);
+        print_arch_reg_file(cpu);
 
         if (cpu->single_step)
         {

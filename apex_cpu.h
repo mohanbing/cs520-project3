@@ -7,9 +7,9 @@
 #define _APEX_CPU_H_
 
 #include "apex_macros.h"
-#include "apex_iq.h"
+#include <stdbool.h>
 
- #define No_of_IQ_Entry 8
+#define No_of_IQ_Entry 8
 
 /* Format of an APEX instruction  */
 typedef struct APEX_Instruction
@@ -46,6 +46,13 @@ typedef struct CPU_Stage
     int has_insn;
 } CPU_Stage;
 
+typedef struct APEX_PHY_REG
+{
+    int reg_tag;
+    int reg_value;
+    int reg_flag;
+} APEX_PHY_REG;
+
 typedef struct IQ_Entry
 {
     int pc;
@@ -70,13 +77,32 @@ typedef struct IQ
     IQ_Entry iq_entry[No_of_IQ_Entry];
 }IQ;
 
-
-typedef struct APEX_PHY_REG
+typedef struct LSQ_Entry
 {
-    int reg_tag;
-    int reg_value;
-    int reg_flag;
-} APEX_PHY_REG;
+    int lsq_estd;
+    int opcode;
+    int pc;
+    int load_str;
+    int mem_addr_valid;
+    int mem_addr;
+
+    int rob_idx;
+
+    int renamed_rs1;
+    int renamed_rs1_value_valid;
+    int renamed_rs1_value;
+
+    int renamed_rs2;
+    int renamed_rs2_value_valid;
+    int renamed_rs2_value;
+
+    int renamed_rs3;
+    int renamed_rs3_value_valid;
+    int renamed_rs3_value;
+
+    int renamed_rd;
+    int dest_type;
+}LSQ_Entry;
 
 /* Model of APEX CPU */
 typedef struct APEX_CPU
@@ -104,6 +130,14 @@ typedef struct APEX_CPU
     //iq
     // IQ_Entry *iq_fifo[No_of_IQ_Entry];
     IQ iq_fifo;
+
+    LSQ_Entry *lsq[LSQ_SIZE];
+    int lsq_head;
+    int lsq_tail;
+
+    LSQ_Entry *lsq[LSQ_SIZE];
+    int lsq_head;
+    int lsq_tail;
 
     /* Pipeline stages */
     CPU_Stage fetch;
