@@ -7,9 +7,9 @@
 #define _APEX_CPU_H_
 
 #include "apex_macros.h"
-#include "apex_iq.h"
+#include <stdbool.h>
 
- #define No_of_IQ_Entry 8
+#define No_of_IQ_Entry 8
 
 /* Format of an APEX instruction  */
 typedef struct APEX_Instruction
@@ -46,6 +46,13 @@ typedef struct CPU_Stage
     int has_insn;
 } CPU_Stage;
 
+typedef struct APEX_PHY_REG
+{
+    int reg_tag;
+    int reg_value;
+    int reg_flag;
+} APEX_PHY_REG;
+
 typedef struct IQ_Entry
 {
     int pc;
@@ -63,8 +70,6 @@ typedef struct IQ_Entry
     APEX_PHY_REG *prs1;
     APEX_PHY_REG *prs2;
 
-    int rd;
-
     int lsqindex;
     int robindex;
 }IQ_Entry;
@@ -74,14 +79,6 @@ typedef struct IQ
     int iq_free; // flag if iq is free or not
     IQ_Entry iq_entry[No_of_IQ_Entry];
 }IQ;
-
-
-typedef struct APEX_PHY_REG
-{
-    int reg_tag;
-    int reg_value;
-    int reg_flag;
-} APEX_PHY_REG;
 
 typedef struct LSQ_Entry
 {
@@ -101,6 +98,10 @@ typedef struct LSQ_Entry
     int renamed_rs2;
     int renamed_rs2_value_valid;
     int renamed_rs2_value;
+
+    int renamed_rs3;
+    int renamed_rs3_value_valid;
+    int renamed_rs3_value;
 
     int renamed_rd;
     int dest_type;
