@@ -15,7 +15,9 @@
 /* Size of integer register file */
 #define ARCH_REG_FILE_SIZE 8
 #define PHY_REG_FILE_SIZE 15
+
 #define ROB_SIZE 12
+#define LSQ_SIZE 4
 
 /* Numeric OPCODE identifiers for instructions */
 #define OPCODE_ADD 0x0
