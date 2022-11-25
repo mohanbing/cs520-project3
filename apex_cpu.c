@@ -160,6 +160,13 @@ print_instruction(const CPU_Stage *stage)
                    stage->rs2);
             break;
         }
+
+        case OPCODE_JUMP:
+        {
+            printf("%s,R%d,#%d ", stage->opcode_str, stage->rs1,
+                   stage->imm);
+            break;
+        }
     }
 }
 
@@ -182,18 +189,36 @@ print_stage_content(const char *name, const CPU_Stage *stage)
     printf("\n");
 }
 
+static void
+rename_table_assign_free_reg(APEX_CPU *cpu, int rd)
+{
+    if(cpu->free_list_head == cpu->free_list_tail)
+    {
+        if(cpu->free_list[cpu->free_list_head] == -1)
+        {
+            cpu->rename_stall = 1;
+            return;
+        }
+    }
+
+    cpu->rename_stall = 0;
+    cpu->rename_table[rd] = cpu->free_list[cpu->free_list_head];
+    cpu->free_list_head++;
+    cpu->free_list_head = cpu->free_list_head%PHY_REG_FILE_SIZE;
+}
+
 /* Debug function which prints the register file
  *
  * Note: You are not supposed to edit this function
  */
 static void
-print_reg_file(const APEX_CPU *cpu)
+print_arch_reg_file(const APEX_CPU *cpu)
 {
     printf("----------\n%s\n----------\n", "State of Architectural Register File");
     int i;
-    for (i = 0; i < REG_FILE_SIZE ; ++i)
+    for (i = 0; i < ARCH_REG_FILE_SIZE ; ++i)
     {
-        printf("R%-3d\tValue:[%-3d]", i, cpu->regs[i]);
+        printf("R%-3d\tValue:[%-3d]", i, cpu->arch_regs[i];
         printf("\n");
     }
 }
@@ -230,13 +255,15 @@ APEX_fetch(APEX_CPU *cpu)
         cpu->fetch.rd = current_ins->rd;
         cpu->fetch.rs1 = current_ins->rs1;
         cpu->fetch.rs2 = current_ins->rs2;
+        cpu->fetch.rs3 = current_ins->rs3;
         cpu->fetch.imm = current_ins->imm;
 
         /* Update PC for next instruction */
         cpu->pc += 4;
 
         /* Copy data from fetch latch to decode latch*/
-        cpu->decode = cpu->fetch;
+        if(cpu->decode_rename1.has_insn==0)
+            cpu->decode_rename1 = cpu->fetch;
 
         if (ENABLE_DEBUG_MESSAGES)
         {
@@ -252,190 +279,371 @@ APEX_fetch(APEX_CPU *cpu)
 }
 
 /*
- * Decode Stage of APEX Pipeline
+ * Decode/Rename1 Stage of APEX Pipeline
  *
  * Note: You are free to edit this function according to your implementation
  */
 static void
 APEX_decode_rename1(APEX_CPU *cpu)
 {
-    if (cpu->decode.has_insn)
+    if (cpu->decode_rename1.has_insn)
     {
         /* Read operands from register file based on the instruction type */
-        switch (cpu->decode.opcode)
+        switch (cpu->decode_rename1.opcode)
         {
             case OPCODE_ADD:
             {
-                cpu->decode.rs1_value = cpu->regs[cpu->decode.rs1];
-                cpu->decode.rs2_value = cpu->regs[cpu->decode.rs2];
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+
+                if (cpu->decode_rename1.renamed_rs2==-1)
+                {
+                    cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+                
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                if(cpu->rename_stall==0)
+                    cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+
+                break;
+            }
+
+            case OPCODE_ADDL:
+            {
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                if(cpu->rename_stall==0)
+                    cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+
                 break;
             }
 
             case OPCODE_LOAD:
             {
-                cpu->decode.rs1_value = cpu->regs[cpu->decode.rs1];
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                if(cpu->rename_stall==0)
+                    cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+
+                break;
+            }
+
+            case OPCODE_LDR:
+            {
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+
+                if (cpu->decode_rename1.renamed_rs2==-1)
+                {
+                    cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+                
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                if(cpu->rename_stall==0)
+                    cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+
+                break;
+            }
+
+            case OPCODE_STORE:
+            {
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+
+                if (cpu->decode_rename1.renamed_rs2==-1)
+                {
+                    cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+
+                break;
+            }
+
+            case OPCODE_STR:
+            {
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+
+                if (cpu->decode_rename1.renamed_rs2==-1)
+                {
+                    cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                }
+
+                if (cpu->decode_rename1.renamed_rs3==-1)
+                {
+                    cpu->decode_rename1.renamed_rs3 = cpu->rename_table[cpu->decode_rename1.rs3];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+                cpu->decode_rename1.rs3_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs3]->reg_value;
+
                 break;
             }
 
             case OPCODE_MOVC:
             {
                 /* MOVC doesn't have register operands */
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                if(cpu->rename_stall==0)
+                    cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
                 break;
             }
-        }
 
-        /* Copy data from decode latch to execute latch*/
-        cpu->execute = cpu->decode;
-        cpu->decode.has_insn = FALSE;
-
-        if (ENABLE_DEBUG_MESSAGES)
-        {
-            print_stage_content("Decode/RF", &cpu->decode);
-        }
-    }
-}
-
-/*
- * Execute Stage of APEX Pipeline
- *
- * Note: You are free to edit this function according to your implementation
- */
-static void
-APEX_execute(APEX_CPU *cpu)
-{
-    if (cpu->execute.has_insn)
-    {
-        /* Execute logic based on instruction type */
-        switch (cpu->execute.opcode)
-        {
-            case OPCODE_ADD:
+            case OPCODE_SUB:
             {
-                cpu->execute.result_buffer
-                    = cpu->execute.rs1_value + cpu->execute.rs2_value;
-
-                /* Set the zero flag based on the result buffer */
-                if (cpu->execute.result_buffer == 0)
+                if (cpu->decode_rename1.renamed_rs1==-1)
                 {
-                    cpu->zero_flag = TRUE;
-                } 
-                else 
-                {
-                    cpu->zero_flag = FALSE;
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
                 }
+
+                if (cpu->decode_rename1.renamed_rs2==-1)
+                {
+                    cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+                
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                if(cpu->rename_stall==0)
+                    cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+
                 break;
             }
 
-            case OPCODE_LOAD:
+            case OPCODE_SUBL:
             {
-                cpu->execute.memory_address
-                    = cpu->execute.rs1_value + cpu->execute.imm;
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                if(cpu->rename_stall==0)
+                    cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+
+                break;
+            }
+
+            case OPCODE_MUL:
+            {
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+
+                if (cpu->decode_rename1.renamed_rs2==-1)
+                {
+                    cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+                
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                if(cpu->rename_stall==0)
+                    cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+
+                break;
+            }
+
+            case OPCODE_DIV:
+            {
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+
+                if (cpu->decode_rename1.renamed_rs2==-1)
+                {
+                    cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+                
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                if(cpu->rename_stall==0)
+                    cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+
+                break;
+            }
+
+            case OPCODE_CMP:
+            {
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+
+                if (cpu->decode_rename1.renamed_rs2==-1)
+                {
+                    cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                if(cpu->rename_stall==0)
+                    cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                
+                break;
+            }
+
+            case OPCODE_AND:
+            {
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+
+                if (cpu->decode_rename1.renamed_rs2==-1)
+                {
+                    cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                if(cpu->rename_stall==0)
+                    cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                
+                break;
+            }
+
+            case OPCODE_OR:
+            {
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+
+                if (cpu->decode_rename1.renamed_rs2==-1)
+                {
+                    cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                if(cpu->rename_stall==0)
+                    cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                
+                break;
+            }
+
+            case OPCODE_XOR:
+            {
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+
+                if (cpu->decode_rename1.renamed_rs2==-1)
+                {
+                    cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                }
+
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                if(cpu->rename_stall==0)
+                    cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                
+                break;
+            }
+
+            case OPCODE_JUMP:
+            {
+                if (cpu->decode_rename1.renamed_rs1==-1)
+                {
+                    cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                }
+                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+
+                break;
+            }
+
+            case OPCODE_NOP:
+            {
                 break;
             }
 
             case OPCODE_BZ:
             {
-                if (cpu->zero_flag == TRUE)
-                {
-                    /* Calculate new PC, and send it to fetch unit */
-                    cpu->pc = cpu->execute.pc + cpu->execute.imm;
-                    
-                    /* Since we are using reverse callbacks for pipeline stages, 
-                     * this will prevent the new instruction from being fetched in the current cycle*/
-                    cpu->fetch_from_next_cycle = TRUE;
-
-                    /* Flush previous stages */
-                    cpu->decode.has_insn = FALSE;
-
-                    /* Make sure fetch stage is enabled to start fetching from new PC */
-                    cpu->fetch.has_insn = TRUE;
-                }
                 break;
             }
 
             case OPCODE_BNZ:
             {
-                if (cpu->zero_flag == FALSE)
-                {
-                    /* Calculate new PC, and send it to fetch unit */
-                    cpu->pc = cpu->execute.pc + cpu->execute.imm;
-                    
-                    /* Since we are using reverse callbacks for pipeline stages, 
-                     * this will prevent the new instruction from being fetched in the current cycle*/
-                    cpu->fetch_from_next_cycle = TRUE;
-
-                    /* Flush previous stages */
-                    cpu->decode.has_insn = FALSE;
-
-                    /* Make sure fetch stage is enabled to start fetching from new PC */
-                    cpu->fetch.has_insn = TRUE;
-                }
-                break;
-            }
-
-            case OPCODE_MOVC: 
-            {
-                cpu->execute.result_buffer = cpu->execute.imm;
-
-                /* Set the zero flag based on the result buffer */
-                if (cpu->execute.result_buffer == 0)
-                {
-                    cpu->zero_flag = TRUE;
-                } 
-                else 
-                {
-                    cpu->zero_flag = FALSE;
-                }
                 break;
             }
         }
 
-        /* Copy data from execute latch to memory latch*/
-        cpu->memory = cpu->execute;
-        cpu->execute.has_insn = FALSE;
+        /* Copy data from decode latch to execute latch*/
+        if(cpu->rename2_dispatch.has_insn == 0)
+            cpu->rename2_dispatch = cpu->decode_rename1;
+            
+        cpu->decode_rename1.has_insn = FALSE;
 
         if (ENABLE_DEBUG_MESSAGES)
         {
-            print_stage_content("Execute", &cpu->execute);
+            print_stage_content("Decode/Rename1", &cpu->decode_rename1);
+        }
+    }
+    else
+    {
+        if (ENABLE_DEBUG_MESSAGES)
+        {
+            print_stage_content("Decode/Rename1", NULL);
         }
     }
 }
 
 /*
- * Memory Stage of APEX Pipeline
+ * Rename2/Dispatch Stage of APEX Pipeline
  *
  * Note: You are free to edit this function according to your implementation
  */
 static void
-APEX_memory(APEX_CPU *cpu)
+APEX_rename2_dispatch(APEX_CPU *cpu)
 {
-    if (cpu->memory.has_insn)
-    {
-        switch (cpu->memory.opcode)
-        {
-            case OPCODE_ADD:
-            {
-                /* No work for ADD */
-                break;
-            }
-
-            case OPCODE_LOAD:
-            {
-                /* Read from data memory */
-                cpu->memory.result_buffer
-                    = cpu->data_memory[cpu->memory.memory_address];
-                break;
-            }
-        }
-
-        /* Copy data from memory latch to writeback latch*/
-        cpu->writeback = cpu->memory;
-        cpu->memory.has_insn = FALSE;
-
-        if (ENABLE_DEBUG_MESSAGES)
-        {
-            print_stage_content("Memory", &cpu->memory);
-        }
-    }
+    
 }
 
 /*

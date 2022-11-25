@@ -8,6 +8,9 @@
 
 #include<stdbool.h>
 #include "apex_macros.h"
+//#include "apex_iq.h"
+
+ #define No_of_IQ_Entry 8
 
 /* Format of an APEX instruction  */
 typedef struct APEX_Instruction
@@ -30,7 +33,11 @@ typedef struct CPU_Stage
     int rs1;
     int rs2;
     int rs3;
+    int renamed_rs1;
+    int renamed_rs2;
+    int renamed_rs3;
     int rd;
+    int renamed_rd;
     int imm;
     int rs1_value;
     int rs2_value;
@@ -39,6 +46,34 @@ typedef struct CPU_Stage
     int memory_address;
     int has_insn;
 } CPU_Stage;
+
+typedef struct IQ_Entry
+{
+    int pc;
+    char opcode_str[128];
+    int counter;
+    int free;
+    char fu_type[128];
+    int imm;
+
+    //use it for arch register
+    int rs1;
+    int rs2;
+    int rd;
+
+    // APEX_PHY_REG *prs1;
+    // APEX_PHY_REG *prs2;
+
+    int lsqindex;
+    int robindex;
+}IQ_Entry;
+
+typedef struct IQ
+{
+    int iq_free; // flag if iq is free or not
+    IQ_Entry iq_entry[No_of_IQ_Entry];
+}IQ;
+
 
 typedef struct APEX_PHY_REG
 {
@@ -50,7 +85,7 @@ typedef struct APEX_PHY_REG
 typedef struct ROB_ENTRY
 {
     int establised_bit;             //rob entry established bit
-    char instruction_type[128];     //
+    int instruction_type;     //
     int pc;                         //program counter
     int physical_rd;                //physical register destination
     int overwritten_entry;          //overwritten rename table entry
@@ -79,7 +114,13 @@ typedef struct APEX_CPU
 
     int free_list[PHY_REG_FILE_SIZE];
     int rename_table[PHY_REG_FILE_SIZE];
-    
+    int free_list_head;
+    int free_list_tail;
+    int rename_stall;
+
+    //iq
+    IQ_Entry *iq_fifo[12];
+
     //ROB entries
     ROB_ENTRY *ROB[ROB_SIZE];
     int rob_head;
@@ -88,6 +129,7 @@ typedef struct APEX_CPU
     /* Pipeline stages */
     CPU_Stage fetch;
     CPU_Stage decode_rename1;
+    CPU_Stage rename2_dispatch;
 
 } APEX_CPU;
 

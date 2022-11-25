@@ -37,6 +37,7 @@
 #define OPCODE_NOP 0x10
 #define OPCODE_LDR 0x11
 #define OPCODE_STR 0x12
+#define OPCODE_JUMP 0x13
 
 /* Set this flag to 1 to enable debug messages */
 #define ENABLE_DEBUG_MESSAGES 1
