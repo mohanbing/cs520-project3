@@ -668,6 +668,100 @@ APEX_rename2_dispatch(APEX_CPU *cpu)
     }
 }
 
+static void
+APEX_int_fu(APEX_CPU *cpu)
+{
+    if(cpu->int_fu.has_insn==TRUE)
+    {
+        if(cpu->int_fu.opcode == OPCODE_ADD || cpu->int_fu.opcode == OPCODE_LDR || cpu->int_fu.opcode == OPCODE_STR)
+        {
+            cpu->int_fu.result_buffer = cpu->phy_regs[cpu->int_fu.renamed_rs1]->reg_value + cpu->phy_regs[cpu->int_fu.renamed_rs2]->reg_value;
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
+
+            if(cpu->int_fu.result_buffer == 0)
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
+            else
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 1;
+        }
+        else if(cpu->int_fu.opcode == OPCODE_ADDL || cpu->int_fu.opcode == OPCODE_LOAD || cpu->int_fu.opcode == OPCODE_STORE)
+        {
+            cpu->int_fu.result_buffer = cpu->phy_regs[cpu->int_fu.renamed_rs1]->reg_value + cpu->rename2_dispatch.imm;
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
+
+            if(cpu->int_fu.result_buffer == 0)
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
+            else
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 1;
+        }
+        else if(cpu->int_fu.opcode == OPCODE_SUB)
+        {
+            cpu->int_fu.result_buffer = cpu->phy_regs[cpu->int_fu.renamed_rs1]->reg_value - cpu->phy_regs[cpu->int_fu.renamed_rs2]->reg_value;
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
+
+            if(cpu->int_fu.result_buffer == 0)
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
+            else
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 1;
+        }
+        else if(cpu->int_fu.opcode == OPCODE_SUBL)
+        {
+            cpu->int_fu.result_buffer = cpu->phy_regs[cpu->int_fu.renamed_rs1]->reg_value - cpu->rename2_dispatch.imm;
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
+
+            if(cpu->int_fu.result_buffer == 0)
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
+            else
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 1;
+        }
+    }
+    else if(cpu->int_fu.has_insn == FALSE)
+    {
+        print_stage_content("INT FU -->", NULL);
+    }
+    
+}
+
+static void
+APEX_mul_fu1(APEX_CPU *cpu)
+{
+    
+}
+
+static void
+APEX_mul_fu2(APEX_CPU *cpu)
+{
+    
+}
+
+static void
+APEX_mul_fu3(APEX_CPU *cpu)
+{
+    
+}
+
+static void
+APEX_mul_fu4(APEX_CPU *cpu)
+{
+    
+}
+
+static void
+APEX_lop_fu(APEX_CPU *cpu)
+{
+    
+}
+
+static void
+APEX_dcache(APEX_CPU *cpu)
+{
+    
+}
+
+
 /*
  * This function creates and initializes APEX cpu.
  *
@@ -771,6 +865,22 @@ APEX_cpu_run(APEX_CPU *cpu)
             printf("--------------------------------------------\n");
         }
 
+        APEX_int_fu(cpu);
+        APEX_dcache(cpu);
+        APEX_mul_fu4(cpu);
+        APEX_mul_fu3(cpu);
+        APEX_mul_fu2(cpu);
+        APEX_mul_fu1(cpu);
+        APEX_lop_fu(cpu);
+        
+        //add rob commit functions
+
+        pickup_forwarded_values(cpu);
+        wakeup(cpu);
+        selection_logic(cpu);
+
+        APEX_rename2_dispatch(cpu);
+        APEX_decode_rename1(cpu);
         APEX_fetch(cpu);
 
         print_arch_reg_file(cpu);
