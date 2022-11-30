@@ -680,9 +680,9 @@ APEX_int_fu(APEX_CPU *cpu)
             cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
 
             if(cpu->int_fu.result_buffer == 0)
-                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
-            else
                 cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 1;
+            else
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
         }
         else if(cpu->int_fu.opcode == OPCODE_ADDL || cpu->int_fu.opcode == OPCODE_LOAD || cpu->int_fu.opcode == OPCODE_STORE)
         {
@@ -691,9 +691,9 @@ APEX_int_fu(APEX_CPU *cpu)
             cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
 
             if(cpu->int_fu.result_buffer == 0)
-                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
-            else
                 cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 1;
+            else
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
         }
         else if(cpu->int_fu.opcode == OPCODE_SUB)
         {
@@ -702,9 +702,9 @@ APEX_int_fu(APEX_CPU *cpu)
             cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
 
             if(cpu->int_fu.result_buffer == 0)
-                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
-            else
                 cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 1;
+            else
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
         }
         else if(cpu->int_fu.opcode == OPCODE_SUBL)
         {
@@ -713,10 +713,11 @@ APEX_int_fu(APEX_CPU *cpu)
             cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
 
             if(cpu->int_fu.result_buffer == 0)
-                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
-            else
                 cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 1;
+            else
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
         }
+        print_stage_content("LOP FU -->", &cpu->int_fu);
     }
     else if(cpu->int_fu.has_insn == FALSE)
     {
@@ -728,31 +729,153 @@ APEX_int_fu(APEX_CPU *cpu)
 static void
 APEX_mul_fu1(APEX_CPU *cpu)
 {
+    if(cpu->mul_fu1.has_insn == TRUE)
+    {
+        cpu->mul_fu1.result_buffer = cpu->phy_regs[cpu->mul_fu1.renamed_rs1]->reg_value * cpu->phy_regs[cpu->mul_fu1.renamed_rs2]->reg_value;
+        cpu->phy_regs[cpu->mul_fu1.renamed_rd]->reg_value = cpu->mul_fu1.result_buffer;
+        cpu->phy_regs[cpu->mul_fu1.renamed_rd]->valid = 1;
+
+        if(cpu->mul_fu1.result_buffer == 0)
+            cpu->phy_regs[cpu->mul_fu1.renamed_rd]->reg_flag = 1;
+        else
+            cpu->phy_regs[cpu->mul_fu1.renamed_rd]->reg_flag = 0;
+        
+        print_stage_content("MUL FU 1-->", &cpu->mul_fu1);
+        if(cpu->mul_fu2.has_insn==FALSE)
+        {
+            cpu->mul_fu2 = cpu->mul_fu1;
+            cpu->mul_fu1.has_insn = FALSE;
+        }
+    }
+    else
+    {
+        print_stage_content("MUL FU 1-->", NULL);
+    }
     
 }
 
 static void
 APEX_mul_fu2(APEX_CPU *cpu)
 {
-    
+    if(cpu->mul_fu2.has_insn == TRUE)
+    {
+        cpu->mul_fu2.result_buffer = cpu->phy_regs[cpu->mul_fu2.renamed_rs1]->reg_value * cpu->phy_regs[cpu->mul_fu2.renamed_rs2]->reg_value;
+        cpu->phy_regs[cpu->mul_fu2.renamed_rd]->reg_value = cpu->mul_fu2.result_buffer;
+        cpu->phy_regs[cpu->mul_fu2.renamed_rd]->valid = 1;
+
+        if(cpu->mul_fu2.result_buffer == 0)
+            cpu->phy_regs[cpu->mul_fu2.renamed_rd]->reg_flag = 1;
+        else
+            cpu->phy_regs[cpu->mul_fu2.renamed_rd]->reg_flag = 0;
+        
+        print_stage_content("MUL FU 2-->", &cpu->mul_fu2);
+        if(cpu->mul_fu3.has_insn==FALSE)
+        {
+            cpu->mul_fu3 = cpu->mul_fu2;
+            cpu->mul_fu2.has_insn = FALSE;
+        }
+    }
+    else
+    {
+        print_stage_content("MUL FU 2-->", NULL);
+    }
 }
 
 static void
 APEX_mul_fu3(APEX_CPU *cpu)
 {
-    
+    if(cpu->mul_fu3.has_insn == TRUE)
+    {
+        cpu->mul_fu3.result_buffer = cpu->phy_regs[cpu->mul_fu3.renamed_rs1]->reg_value * cpu->phy_regs[cpu->mul_fu3.renamed_rs2]->reg_value;
+        cpu->phy_regs[cpu->mul_fu3.renamed_rd]->reg_value = cpu->mul_fu3.result_buffer;
+        cpu->phy_regs[cpu->mul_fu3.renamed_rd]->valid = 1;
+
+        if(cpu->mul_fu3.result_buffer == 0)
+            cpu->phy_regs[cpu->mul_fu3.renamed_rd]->reg_flag = 1;
+        else
+            cpu->phy_regs[cpu->mul_fu3.renamed_rd]->reg_flag = 0;
+        
+        print_stage_content("MUL FU 3-->", &cpu->mul_fu3);
+        if(cpu->mul_fu4.has_insn==FALSE)
+        {
+            cpu->mul_fu4 = cpu->mul_fu3;
+            cpu->mul_fu3.has_insn = FALSE;
+        }
+    }
+    else
+    {
+        print_stage_content("MUL FU 3-->", NULL);
+    }
 }
 
 static void
 APEX_mul_fu4(APEX_CPU *cpu)
 {
-    
+    if(cpu->mul_fu4.has_insn == TRUE)
+    {
+        cpu->mul_fu4.result_buffer = cpu->phy_regs[cpu->mul_fu4.renamed_rs1]->reg_value * cpu->phy_regs[cpu->mul_fu4.renamed_rs2]->reg_value;
+        cpu->phy_regs[cpu->mul_fu4.renamed_rd]->reg_value = cpu->mul_fu4.result_buffer;
+        cpu->phy_regs[cpu->mul_fu4.renamed_rd]->valid = 1;
+
+        if(cpu->mul_fu4.result_buffer == 0)
+            cpu->phy_regs[cpu->mul_fu4.renamed_rd]->reg_flag = 1;
+        else
+            cpu->phy_regs[cpu->mul_fu4.renamed_rd]->reg_flag = 0;
+        
+        print_stage_content("MUL FU 4-->", &cpu->mul_fu4);
+        
+        // add forwarding logic
+    }
+    else
+    {
+        print_stage_content("MUL FU 4-->", NULL);
+    }
 }
 
 static void
 APEX_lop_fu(APEX_CPU *cpu)
 {
-    
+    if(cpu->lop_fu.has_insn==TRUE)
+    {
+        if(cpu->lop_fu.opcode == OPCODE_OR)
+        {
+            cpu->lop_fu.result_buffer = cpu->phy_regs[cpu->lop_fu.renamed_rs1]->reg_value | cpu->phy_regs[cpu->lop_fu.renamed_rs2]->reg_value;
+            cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = cpu->lop_fu.result_buffer;
+            cpu->phy_regs[cpu->lop_fu.renamed_rd]->valid = 1;
+
+            if(cpu->lop_fu.result_buffer == 0)
+                cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 1;
+            else
+                cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 0;
+        }
+        else if(cpu->lop_fu.opcode == OPCODE_AND)
+        {
+            cpu->lop_fu.result_buffer = cpu->phy_regs[cpu->lop_fu.renamed_rs1]->reg_value & cpu->phy_regs[cpu->lop_fu.renamed_rs2]->reg_value;
+            cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = cpu->lop_fu.result_buffer;
+            cpu->phy_regs[cpu->lop_fu.renamed_rd]->valid = 1;
+
+            if(cpu->lop_fu.result_buffer == 0)
+                cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 1;
+            else
+                cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 0;
+        }
+        else if(cpu->lop_fu.opcode == OPCODE_XOR)
+        {
+            cpu->lop_fu.result_buffer = cpu->phy_regs[cpu->lop_fu.renamed_rs1]->reg_value ^ cpu->phy_regs[cpu->lop_fu.renamed_rs2]->reg_value;
+            cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = cpu->lop_fu.result_buffer;
+            cpu->phy_regs[cpu->lop_fu.renamed_rd]->valid = 1;
+
+            if(cpu->lop_fu.result_buffer == 0)
+                cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 1;
+            else
+                cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 0;
+        }
+        print_stage_content("LOP FU -->", &cpu->lop_fu);
+    }
+    else
+    {
+        print_stage_content("LOP FU -->", NULL);
+    }
 }
 
 static void

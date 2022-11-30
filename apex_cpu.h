@@ -111,6 +111,7 @@ typedef struct LSQ_Entry
 
     int renamed_rd;
     int dest_type;
+    CPU_Stage *disptach;
 }LSQ_Entry;
 
 typedef struct ROB_ENTRY

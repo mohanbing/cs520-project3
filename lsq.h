@@ -58,6 +58,7 @@ int add_lsq_entry(APEX_CPU *cpu, CPU_Stage *stage)
         cpu->lsq[cpu->lsq_tail]->renamed_rs3_value_valid = 1;
         cpu->lsq[cpu->lsq_tail]->renamed_rs3 = -1;
     }
+    cpu->lsq[cpu->lsq_tail]->disptach = stage;
 
     int lsq_idx = cpu->lsq_tail;
     cpu->lsq_tail++;
@@ -77,3 +78,8 @@ void delete_lsq_entry(APEX_CPU *cpu)
     cpu->lsq_head++;
     cpu->lsq_head%LSQ_SIZE;
 }
+
+// void move_to_dcache(APEX_CPU *cpu)
+// {
+//     //
+// }

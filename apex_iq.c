@@ -212,11 +212,12 @@ void selection_logic(APEX_CPU *cpu)
         IQ_Entry *iq_entry = cpu->iq[i];
         if(iq_entry->request_exec)
         {
-            if(issue_iq(cpu, iq_entry->fu_type)!=NULL)
+            CPU_Stage *fu_stage = issue_iq(cpu, iq_entry->fu_type);
+            if(fu_stage!=NULL)
             {
                 iq_entry->granted = TRUE;
-                cpu->mul_fu1 = *(iq_entry->dispatch);
-                cpu->mul_fu1.has_insn = TRUE;
+                *fu_stage = *(iq_entry->dispatch);
+                (*fu_stage).has_insn = TRUE;
 
                 // deletes entry from issue queue
                 free(iq_entry);
