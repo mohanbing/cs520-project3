@@ -191,6 +191,15 @@ print_stage_content(const char *name, const CPU_Stage *stage)
 }
 
 static void
+add_phy_reg_free_list(APEX_CPU *cpu, int tag)
+{
+    cpu->phy_regs[tag]->is_valid = FALSE;
+    cpu->free_list[cpu->free_list_tail] = tag;
+    cpu->free_list_tail++;
+    cpu->free_list_tail = cpu->free_list_tail%PHY_REG_FILE_SIZE;
+}
+
+static void
 rename_table_assign_free_reg(APEX_CPU *cpu, int rd)
 {
     if(cpu->free_list_head == cpu->free_list_tail)
