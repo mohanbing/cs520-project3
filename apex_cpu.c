@@ -717,7 +717,13 @@ APEX_int_fu(APEX_CPU *cpu)
             else
                 cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
         }
-        print_stage_content("LOP FU -->", &cpu->int_fu);
+        print_stage_content("INT FU -->", &cpu->int_fu);
+        if(cpu->forwarding_bus[cpu->int_fu.renamed_rd].tag_valid==1)
+            cpu->forwarding_bus[cpu->int_fu.renamed_rd].data_value = cpu->int_fu.result_buffer;
+        else
+        {
+            request_forwarding_bus_access(cpu, cpu->int_fu, "IntFU");
+        }
     }
     else if(cpu->int_fu.has_insn == FALSE)
     {
@@ -801,6 +807,7 @@ APEX_mul_fu3(APEX_CPU *cpu)
             cpu->mul_fu4 = cpu->mul_fu3;
             cpu->mul_fu3.has_insn = FALSE;
         }
+        request_forwarding_bus_access(cpu, cpu->mul_fu3, "MulFU");
     }
     else
     {
@@ -825,6 +832,12 @@ APEX_mul_fu4(APEX_CPU *cpu)
         print_stage_content("MUL FU 4-->", &cpu->mul_fu4);
         
         // add forwarding logic
+        if(cpu->forwarding_bus[cpu->mul_fu4.renamed_rd].tag_valid==1)
+            cpu->forwarding_bus[cpu->mul_fu4.renamed_rd].data_value = cpu->mul_fu4.result_buffer;
+        else
+        {
+            request_forwarding_bus_access(cpu, cpu->mul_fu4, "MulFU");
+        }
     }
     else
     {
@@ -871,6 +884,13 @@ APEX_lop_fu(APEX_CPU *cpu)
                 cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 0;
         }
         print_stage_content("LOP FU -->", &cpu->lop_fu);
+        if(cpu->forwarding_bus[cpu->lop_fu.renamed_rd].tag_valid==1)
+            cpu->forwarding_bus[cpu->lop_fu.renamed_rd].data_value = cpu->lop_fu.result_buffer;
+        else
+        {
+            request_forwarding_bus_access(cpu, cpu->lop_fu, "LopFU");
+        }
+
     }
     else
     {
@@ -882,6 +902,42 @@ static void
 APEX_dcache(APEX_CPU *cpu)
 {
     
+}
+
+static void
+request_forwarding_bus_access(APEX_CPU *cpu, CPU_Stage stage, char *fu_type)
+{
+   if(strcmp(fu_type, "IntFU") == 0)
+   {
+        cpu->fwd_bus_req_list[0] = &stage;
+   }
+   else if(strcmp(fu_type, "MulFU") == 0)
+   {
+        cpu->fwd_bus_req_list[2] = &stage;
+   }
+   else if(strcmp(fu_type, "LopFU") == 0)
+   {
+        cpu->fwd_bus_req_list[3] = &stage;
+   }
+   else //dcache
+   {
+        cpu->fwd_bus_req_list[1] = &stage;
+   }
+}
+
+static void
+process_forwarding_requests(APEX_CPU *cpu)
+{
+    int i;
+    for(int i=0; i<4; i++)
+    {
+        if(cpu->fwd_bus_req_list[i]!=NULL)
+        {
+            cpu->forwarding_bus[cpu->fwd_bus_req_list[i]->renamed_rd].tag_valid=1;
+            cpu->fwd_bus_req_list[i]=NULL;
+            return;
+        }
+    }
 }
 
 
@@ -998,9 +1054,10 @@ APEX_cpu_run(APEX_CPU *cpu)
         
         //add rob commit functions
 
-        pickup_forwarded_values(cpu);
-        wakeup(cpu);
         selection_logic(cpu);
+        wakeup(cpu);
+        pickup_forwarded_values(cpu);
+        process_forwarding_requests(cpu);
 
         APEX_rename2_dispatch(cpu);
         APEX_decode_rename1(cpu);

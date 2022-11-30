@@ -210,6 +210,7 @@ void selection_logic(APEX_CPU *cpu)
     for(i=0; i<IQ_SIZE; i++)
     {
         IQ_Entry *iq_entry = cpu->iq[i];
+        //check allocated
         if(iq_entry->request_exec)
         {
             CPU_Stage *fu_stage = issue_iq(cpu, iq_entry->fu_type);
@@ -219,6 +220,10 @@ void selection_logic(APEX_CPU *cpu)
                 *fu_stage = *(iq_entry->dispatch);
                 (*fu_stage).has_insn = TRUE;
 
+                if(fu_stage->rd != -1 && fu_stage->opcode!=OPCODE_MUL)
+                {
+                    request_forwarding_bus_access(cpu, *fu_stage, iq_entry->fu_type);
+                }
                 // deletes entry from issue queue
                 free(iq_entry);
                 iq_entry = NULL;

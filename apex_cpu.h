@@ -172,6 +172,9 @@ typedef struct APEX_CPU
     int rob_head;
     int rob_tail;
 
+    CPU_Stage *fwd_bus_req_list[4];
+    int fwd_req_list_idx = 0;
+
     /* Pipeline stages */
     CPU_Stage fetch;
     CPU_Stage decode_rename1;
