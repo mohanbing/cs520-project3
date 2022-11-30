@@ -4,7 +4,7 @@
 #include "apex_iq.h";
 
 
-bool is_lsq_free(APEX_CPU *cpu)
+bool is_iq_free(APEX_CPU *cpu)
 {
     if(cpu->iq_head == cpu->iq_tail && cpu->iq[cpu->iq_head]!=NULL)
     {
@@ -15,8 +15,8 @@ bool is_lsq_free(APEX_CPU *cpu)
 
 int insert_iq_entry(APEX_CPU* cpu, CPU_Stage *stage) //insert in iq
 {
-    cpu->iq[cpu->iq_tail]->allocated = 1;   
     cpu->iq[cpu->iq_tail] = (IQ_Entry *)malloc(sizeof(IQ_Entry));
+    cpu->iq[cpu->iq_tail]->allocated = 1;
     cpu->iq[cpu->iq_tail]->pc = stage->pc;
     cpu->iq[cpu->iq_tail]->opcode = stage->opcode;
     // cpu->iq_fifo.iq_entry[index].counter = iq_entry->counter;
@@ -83,6 +83,8 @@ int insert_iq_entry(APEX_CPU* cpu, CPU_Stage *stage) //insert in iq
     if(stage->rd!=-1)
         cpu->iq[cpu->iq_tail]->dst_tag = stage->renamed_rd;
 
+    cpu->iq[cpu->iq_tail]->dispatch = stage;
+
     int tail_idx = cpu->iq_tail;
     cpu->iq_tail++;
     cpu->iq_tail = cpu->iq_tail%IQ_SIZE;
@@ -90,24 +92,34 @@ int insert_iq_entry(APEX_CPU* cpu, CPU_Stage *stage) //insert in iq
     return tail_idx;
 }
 
-int issue_iq(APEX_CPU* cpu, char* fu_type) // 
+CPU_Stage* issue_iq(APEX_CPU* cpu, char* fu_type) // 
 {
-    // issue this to MulFU
+    // checks whether insn can be issued to the FU
     if(strcmp(fu_type,"MulFU")==0)
     {
-        
+        if(cpu->mul_fu1.has_insn==FALSE)
+        {
+            return &(cpu->mul_fu1);
+        }
+        return NULL;
     }
 
-    // issue this to IntFU
     if(strcmp(fu_type,"IntFU")==0 || strcmp(fu_type, "LdStr")==0)
     {
-
+        if(cpu->mul_fu1.has_insn==FALSE)
+        {
+            return &(cpu->int_fu);
+        }
+        return NULL;
     }
 
-    // issue this to LopFU
     if(strcmp(fu_type,"LopFU")==0)
     {
-
+        if(cpu->mul_fu1.has_insn==FALSE)
+        {
+            return &(cpu->lop_fu);
+        }
+        return NULL;
     }
 }
 
@@ -139,6 +151,39 @@ void set_lsq_index(APEX_CPU *cpu, int iq_idx, int lsq_idx)
     cpu->iq[iq_idx]->lsqindex = lsq_idx;
 }
 
+void pickup_forwarded_values(APEX_CPU *cpu)
+{
+    int i;
+    for(i=0; i<IQ_SIZE; i++)
+    {
+        IQ_Entry *iq_entry = cpu->iq;
+        if(iq_entry->allocated)
+        {
+            if(!iq_entry->src1_valid)
+            {
+                if(cpu->forwarding_bus[iq_entry->src1_tag].tag_valid == 1)
+                {
+                    iq_entry->src1_valid = TRUE;
+                }
+            }
+            if(!iq_entry->src2_valid)
+            {
+                if(cpu->forwarding_bus[iq_entry->src2_tag].tag_valid == 1)
+                {
+                    iq_entry->src2_valid = TRUE;
+                }
+            }
+            if(!iq_entry->src3_valid)
+            {
+                if(cpu->forwarding_bus[iq_entry->src3_tag].tag_valid == 1)
+                {
+                    iq_entry->src3_valid = TRUE;
+                }
+            }
+        }
+    }
+}
+
 void wakeup(APEX_CPU *cpu)
 {
     int i;
@@ -157,8 +202,28 @@ void wakeup(APEX_CPU *cpu)
 
 void selection_logic(APEX_CPU *cpu)
 {
-    if(1) //TODO add selection logic on the basis of availability of FU and corresponding iq entry with request_exec == 1
+    // if(1) //TODO add selection logic on the basis of availability of FU and corresponding iq entry with request_exec == 1
+    // {
+    //     // set granted field in iq entry as 1 and copy the insn to the allocated FU (call function issue_iq)
+    // }
+    int i;
+    for(i=0; i<IQ_SIZE; i++)
     {
-        // set granted field in iq entry as 1 and copy the insn to the allocated FU (call function issue_iq)
+        IQ_Entry *iq_entry = cpu->iq[i];
+        if(iq_entry->request_exec)
+        {
+            if(issue_iq(cpu, iq_entry->fu_type)!=NULL)
+            {
+                iq_entry->granted = TRUE;
+                cpu->mul_fu1 = *(iq_entry->dispatch);
+                cpu->mul_fu1.has_insn = TRUE;
+
+                // deletes entry from issue queue
+                free(iq_entry);
+                iq_entry = NULL;
+                cpu->iq_head++;
+                cpu->iq_head = cpu->iq_head % IQ_SIZE;
+            }
+        }
     }
 }

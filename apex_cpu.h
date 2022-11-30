@@ -79,6 +79,8 @@ typedef struct IQ_Entry
     int lsqindex;
     int robindex;
 
+    CPU_Stage *dispatch;
+
     int request_exec;
     int granted;
 
@@ -126,7 +128,7 @@ typedef struct ROB_ENTRY
 
 typedef struct FORWARDING_BUS
 {
-    int tag;
+    int tag_valid;
     int data_value;
 }FORWARDING_BUS;
 
@@ -173,6 +175,7 @@ typedef struct APEX_CPU
     CPU_Stage fetch;
     CPU_Stage decode_rename1;
     CPU_Stage rename2_dispatch;
+
     CPU_Stage int_fu;
 
     CPU_Stage mul_fu1;  // insn always issued to this FU first for MUL
