@@ -7,10 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "apex_cpu.h"
 #include "lsq.h"
-#include "apex_macros.h"
 #include "rob.h"
+#include "apex_iq.c"
 
 /* Converts the PC(4000 series) into array index for code memory
  *
@@ -644,7 +643,29 @@ APEX_decode_rename1(APEX_CPU *cpu)
 static void
 APEX_rename2_dispatch(APEX_CPU *cpu)
 {
-    
+    if(cpu->rename2_dispatch.opcode == OPCODE_LDR ||
+        cpu->rename2_dispatch.opcode == OPCODE_LOAD ||
+        cpu->rename2_dispatch.opcode == OPCODE_STORE ||
+        cpu->rename2_dispatch.opcode == OPCODE_STR)
+    {
+        if(is_iq_free(cpu) && is_lsq_free(cpu) && IsRobFree(cpu))
+        {
+            int issue_q_idx = insert_iq_entry(cpu, &cpu->rename2_dispatch);
+            int lsq_idx = add_lsq_entry(cpu, &cpu->rename2_dispatch);
+            int rob_idx = AddRobEntry(cpu, &cpu->rename2_dispatch, lsq_idx);
+            set_rob_idx(cpu, rob_idx, lsq_idx);
+            cpu->rename2_dispatch.has_insn = FALSE;
+        }
+    }
+    else
+    {
+        if(is_iq_free(cpu) && IsRobFree(cpu))
+        {
+            int issue_q_idx = insert_iq_entry(cpu, &cpu->rename2_dispatch);
+            int rob_idx = AddRobEntry(cpu, &cpu->rename2_dispatch, -1);
+            cpu->rename2_dispatch.has_insn = FALSE;
+        }
+    }
 }
 
 /*
@@ -695,6 +716,10 @@ APEX_cpu_init(const char *filename)
 
     cpu->lsq_head = 0;
     cpu->lsq_tail = 0;
+    cpu->iq_head = 0;
+    cpu->iq_tail = 0;
+    cpu->rob_head = 0;
+    cpu->rob_tail = 0;
 
     /* Parse input file and create code memory */
     cpu->code_memory = create_code_memory(filename, &cpu->code_memory_size);

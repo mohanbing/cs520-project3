@@ -10,7 +10,7 @@ bool is_lsq_free(APEX_CPU *cpu)
     return TRUE;
 }
 
-void add_lsq_entry(APEX_CPU *cpu, CPU_Stage *stage)
+int add_lsq_entry(APEX_CPU *cpu, CPU_Stage *stage)
 {
     cpu->lsq[cpu->lsq_tail] = (LSQ_Entry*)malloc(sizeof(LSQ_Entry));
     cpu->lsq[cpu->lsq_tail]->lsq_estd = 1;
@@ -59,8 +59,11 @@ void add_lsq_entry(APEX_CPU *cpu, CPU_Stage *stage)
         cpu->lsq[cpu->lsq_tail]->renamed_rs3 = -1;
     }
 
+    int lsq_idx = cpu->lsq_tail;
     cpu->lsq_tail++;
     cpu->lsq_tail = cpu->lsq_tail%LSQ_SIZE;
+
+    return lsq_idx;
 }
 
 void set_rob_idx(APEX_CPU *cpu, int rob_idx, int lsq_idx)
