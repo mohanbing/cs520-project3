@@ -117,6 +117,12 @@ typedef struct ROB_ENTRY
     //int mem_error_code;           //
 }ROB_ENTRY;
 
+typedef struct FORWARDING_BUS
+{
+    int tag;
+    int data_value;
+}FORWARDING_BUS;
+
 /* Model of APEX CPU */
 typedef struct APEX_CPU
 {
@@ -139,6 +145,8 @@ typedef struct APEX_CPU
     int free_list_head;
     int free_list_tail;
     int rename_stall;
+
+    FORWARDING_BUS forwarding_bus[PHY_REG_FILE_SIZE];
 
     //iq
     // IQ_Entry *iq_fifo[No_of_IQ_Entry];
