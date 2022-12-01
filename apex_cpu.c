@@ -699,11 +699,13 @@ APEX_decode_rename1(APEX_CPU *cpu)
 
             case OPCODE_BZ:
             {
+                cpu->phy_regs[cpu->zero_flag]->cCount++;
                 break;
             }
 
             case OPCODE_BNZ:
             {
+                cpu->phy_regs[cpu->zero_flag]->cCount++;
                 break;
             }
         }
@@ -740,6 +742,7 @@ APEX_rename2_dispatch(APEX_CPU *cpu)
     {
         if(cpu->phy_regs[cpu->rename2_dispatch.renamed_rs1]->valid)
             cpu->rename2_dispatch.rs1_value = cpu->phy_regs[cpu->rename2_dispatch.renamed_rs1];
+        else if(cpu->)
     }
 
     if(cpu->rename2_dispatch.renamed_rs2 != -1)
@@ -847,6 +850,54 @@ APEX_int_fu(APEX_CPU *cpu)
             else
                 cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
         }
+        else if(cpu->int_fu.opcode == OPCODE_BZ)
+        {
+            if (cpu->phy_regs[cpu->zero_flag]->reg_flag == 1)
+            {
+                /* Calculate new PC, and send it to fetch unit */
+                // cpu->pc = cpu->int_fu.pc + cpu->int_fu.imm;
+                
+                /* Since we are using reverse callbacks for pipeline stages, 
+                    * this will prevent the new instruction from being fetched in the current cycle*/
+                // cpu->fetch_from_next_cycle = TRUE;
+
+                /* Flush previous stages */
+                // if(cpu->decode.has_insn==TRUE)
+                // {
+                //     if(cpu->decode.rd!=-1)
+                //         cpu->regs_valid[cpu->decode.rd]++;
+                // }
+                // cpu->decode.has_insn = FALSE;
+
+                /* Make sure fetch stage is enabled to start fetching from new PC */
+                // cpu->fetch.has_insn = TRUE;
+            }
+        }
+
+        else if(cpu->int_fu.opcode == OPCODE_BNZ)
+        {
+            if (cpu->phy_regs[cpu->zero_flag]->reg_flag == 0)
+            {
+                /* Calculate new PC, and send it to fetch unit */
+                // cpu->pc = cpu->int_fu.pc + cpu->int_fu.imm;
+                
+                /* Since we are using reverse callbacks for pipeline stages, 
+                    * this will prevent the new instruction from being fetched in the current cycle*/
+                // cpu->fetch_from_next_cycle = TRUE;
+
+                /* Flush previous stages */
+                // if(cpu->decode.has_insn==TRUE)
+                // {
+                //     if(cpu->decode.rd!=-1)
+                //         cpu->regs_valid[cpu->decode.rd]++;
+                // }
+                // cpu->decode.has_insn = FALSE;
+
+                /* Make sure fetch stage is enabled to start fetching from new PC */
+                // cpu->fetch.has_insn = TRUE;
+            }
+        }
+
         print_stage_content("INT FU -->", &cpu->int_fu);
         if(cpu->forwarding_bus[cpu->int_fu.renamed_rd].tag_valid==1)
             cpu->forwarding_bus[cpu->int_fu.renamed_rd].data_value = cpu->int_fu.result_buffer;
@@ -1108,21 +1159,25 @@ APEX_cpu_init(const char *filename)
         cpu->phy_regs[i]->renamed_bit = 0;
         cpu->phy_regs[i]->vCount = 0;
         cpu->phy_regs[i]->cCount = 0;
+        cpu->phy_regs[i]->valid = 0;
     }
 
-    for(i=8; i<ARCH_REG_FILE_SIZE; i++)
+    for(i=0; i<ARCH_REG_FILE_SIZE; i++)
+    {
+        cpu->arch_regs[i] = 0;
+    }
+
+    for(i=8; i<PHY_REG_FILE_SIZE; i++)
     {
         cpu->free_list[i] = i;
     }
 
-    for(i=0; i<PHY_REG_FILE_SIZE; i++)
+    for(i=0; i<ARCH_REG_FILE_SIZE; i++)
     {
         cpu->rename_table[i] = i;
-    }
-
-    for(i=0; i<PHY_REG_FILE_SIZE; i++)
-    {
-        cpu->dependency_count[i] = 1;
+        cpu->phy_regs[i]->reg_flag = -1;
+        cpu->phy_regs[i]->valid = 1;
+        cpu->phy_regs[i]->reg_value = 0;
     }
 
     cpu->lsq_head = 0;

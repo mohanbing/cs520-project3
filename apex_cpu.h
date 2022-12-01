@@ -163,8 +163,6 @@ typedef struct APEX_CPU
     CPU_Stage *fwd_bus_req_list[4];
     int fwd_req_list_idx;
 
-    int dependency_count[PHY_REG_FILE_SIZE];
-
     //iq
     IQ_Entry *iq[IQ_SIZE];
     int iq_head;
