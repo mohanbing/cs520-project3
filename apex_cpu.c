@@ -202,6 +202,7 @@ rename_table_assign_free_reg(APEX_CPU *cpu, int rd)
     }
 
     cpu->rename_stall = 0;
+    cpu->phy_regs[cpu->rename_table[rd]]->renamed_bit = 1;
     cpu->rename_table[rd] = cpu->free_list[cpu->free_list_head];
     cpu->free_list_head++;
     cpu->free_list_head = cpu->free_list_head%PHY_REG_FILE_SIZE;
@@ -286,6 +287,7 @@ APEX_fetch(APEX_CPU *cpu)
 static void
 APEX_decode_rename1(APEX_CPU *cpu)
 {
+    int insn_renamed = 0;
     if (cpu->decode_rename1.has_insn)
     {
         /* Read operands from register file based on the instruction type */
@@ -296,19 +298,28 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
                 if (cpu->decode_rename1.renamed_rs2==-1)
                 {
                     cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
-                }
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->vCount++;
 
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->valid == 1)
+                        cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+                }
                 
                 rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
                 if(cpu->rename_stall==0)
+                {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                    cpu->zero_flag = cpu->decode_rename1.renamed_rd;
+                    insn_renamed = 1;
+                }
 
                 break;
             }
@@ -318,13 +329,18 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
-
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 
                 rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
                 if(cpu->rename_stall==0)
+                {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                    cpu->zero_flag = cpu->decode_rename1.renamed_rd;
+                    insn_renamed = 1;
+                }
 
                 break;
             }
@@ -334,14 +350,17 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                
                 rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
                 if(cpu->rename_stall==0)
+                {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
-
+                    insn_renamed = 1;
+                }
                 break;
             }
 
@@ -350,19 +369,25 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
                 if (cpu->decode_rename1.renamed_rs2==-1)
                 {
                     cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->valid == 1)
+                        cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
-
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 
                 rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
                 if(cpu->rename_stall==0)
+                {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                    insn_renamed = 1;
+                }
 
                 break;
             }
@@ -372,15 +397,20 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
                 if (cpu->decode_rename1.renamed_rs2==-1)
                 {
                     cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->valid == 1)
+                        cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
-
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+                
+                insn_renamed = 1;
 
                 break;
             }
@@ -390,22 +420,27 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
                 if (cpu->decode_rename1.renamed_rs2==-1)
                 {
                     cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->valid == 1)
+                        cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
 
                 if (cpu->decode_rename1.renamed_rs3==-1)
                 {
                     cpu->decode_rename1.renamed_rs3 = cpu->rename_table[cpu->decode_rename1.rs3];
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs3]->valid == 1)
+                        cpu->decode_rename1.rs3_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs3]->reg_value;
                 }
 
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
-                cpu->decode_rename1.rs3_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs3]->reg_value;
-
+                insn_renamed = 1;
                 break;
             }
 
@@ -414,7 +449,10 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 /* MOVC doesn't have register operands */
                 rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
                 if(cpu->rename_stall==0)
+                {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                    insn_renamed = 1;
+                }
                 break;
             }
 
@@ -423,19 +461,26 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
                 if (cpu->decode_rename1.renamed_rs2==-1)
                 {
                     cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->valid == 1)
+                        cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
-
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 
                 rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
                 if(cpu->rename_stall==0)
+                {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                    cpu->zero_flag = cpu->decode_rename1.renamed_rd;
+                    insn_renamed = 1;
+                }
 
                 break;
             }
@@ -445,13 +490,18 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
-
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 
                 rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
                 if(cpu->rename_stall==0)
+                {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                    cpu->zero_flag = cpu->decode_rename1.renamed_rd;
+                    insn_renamed = 1;
+                }
 
                 break;
             }
@@ -461,19 +511,26 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
                 if (cpu->decode_rename1.renamed_rs2==-1)
                 {
                     cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->valid == 1)
+                        cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
-
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 
                 rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
                 if(cpu->rename_stall==0)
+                {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                    cpu->zero_flag = cpu->decode_rename1.renamed_rd;
+                    insn_renamed = 1;
+                }
 
                 break;
             }
@@ -483,19 +540,26 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
                 if (cpu->decode_rename1.renamed_rs2==-1)
                 {
                     cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->valid == 1)
+                        cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
-
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 
                 rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
                 if(cpu->rename_stall==0)
+                {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                    cpu->zero_flag = cpu->decode_rename1.renamed_rd;
+                    insn_renamed = 1;
+                }
 
                 break;
             }
@@ -505,19 +569,26 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
                 if (cpu->decode_rename1.renamed_rs2==-1)
                 {
                     cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->valid == 1)
+                        cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
-
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
-
+                
                 rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
                 if(cpu->rename_stall==0)
+                {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                    cpu->zero_flag = cpu->decode_rename1.renamed_rd;
+                    insn_renamed = 1;
+                }
                 
                 break;
             }
@@ -527,19 +598,26 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
                 if (cpu->decode_rename1.renamed_rs2==-1)
                 {
                     cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->valid == 1)
+                        cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
-
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
-
+                
                 rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
                 if(cpu->rename_stall==0)
+                {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                    cpu->zero_flag = cpu->decode_rename1.renamed_rd;
+                    insn_renamed = 1;
+                }
                 
                 break;
             }
@@ -549,19 +627,26 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
                 if (cpu->decode_rename1.renamed_rs2==-1)
                 {
                     cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->valid == 1)
+                        cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
-
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
-
+                
                 rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
                 if(cpu->rename_stall==0)
+                {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                    cpu->zero_flag = cpu->decode_rename1.renamed_rd;
+                    insn_renamed = 1;
+                }
                 
                 break;
             }
@@ -571,19 +656,26 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
                 if (cpu->decode_rename1.renamed_rs2==-1)
                 {
                     cpu->decode_rename1.renamed_rs2 = cpu->rename_table[cpu->decode_rename1.rs2];
-                }
-
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
-
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->valid == 1)
+                        cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
+                }        
+                
                 rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
                 if(cpu->rename_stall==0)
+                {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                    cpu->zero_flag = cpu->decode_rename1.renamed_rd;
+                    insn_renamed = 1;
+                }
                 
                 break;
             }
@@ -593,9 +685,10 @@ APEX_decode_rename1(APEX_CPU *cpu)
                 if (cpu->decode_rename1.renamed_rs1==-1)
                 {
                     cpu->decode_rename1.renamed_rs1 = cpu->rename_table[cpu->decode_rename1.rs1];
+                    cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
+                    if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
+                        cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
-                cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-
                 break;
             }
 
@@ -643,6 +736,24 @@ APEX_decode_rename1(APEX_CPU *cpu)
 static void
 APEX_rename2_dispatch(APEX_CPU *cpu)
 {
+    if(cpu->rename2_dispatch.renamed_rs1 != -1)
+    {
+        if(cpu->phy_regs[cpu->rename2_dispatch.renamed_rs1]->valid)
+            cpu->rename2_dispatch.rs1_value = cpu->phy_regs[cpu->rename2_dispatch.renamed_rs1];
+    }
+
+    if(cpu->rename2_dispatch.renamed_rs2 != -1)
+    {
+        if(cpu->phy_regs[cpu->rename2_dispatch.renamed_rs2]->valid)
+            cpu->rename2_dispatch.rs2_value = cpu->phy_regs[cpu->rename2_dispatch.renamed_rs2];
+    }
+
+    if(cpu->rename2_dispatch.renamed_rs3 != -1)
+    {
+        if(cpu->phy_regs[cpu->rename2_dispatch.renamed_rs3]->valid)
+            cpu->rename2_dispatch.rs3_value = cpu->phy_regs[cpu->rename2_dispatch.renamed_rs3];
+    }
+        
     if(cpu->rename2_dispatch.opcode == OPCODE_LDR ||
         cpu->rename2_dispatch.opcode == OPCODE_LOAD ||
         cpu->rename2_dispatch.opcode == OPCODE_STORE ||
@@ -673,6 +784,25 @@ APEX_int_fu(APEX_CPU *cpu)
 {
     if(cpu->int_fu.has_insn==TRUE)
     {
+        // pickup values from frwding bus
+        if(cpu->rename2_dispatch.renamed_rs1 != -1)
+        {
+            if(cpu->phy_regs[cpu->rename2_dispatch.renamed_rs1]->valid)
+                cpu->rename2_dispatch.rs1_value = cpu->phy_regs[cpu->rename2_dispatch.renamed_rs1];
+        }
+
+        if(cpu->rename2_dispatch.renamed_rs2 != -1)
+        {
+            if(cpu->phy_regs[cpu->rename2_dispatch.renamed_rs2]->valid)
+                cpu->rename2_dispatch.rs2_value = cpu->phy_regs[cpu->rename2_dispatch.renamed_rs2];
+        }
+
+        if(cpu->rename2_dispatch.renamed_rs3 != -1)
+        {
+            if(cpu->phy_regs[cpu->rename2_dispatch.renamed_rs3]->valid)
+                cpu->rename2_dispatch.rs3_value = cpu->phy_regs[cpu->rename2_dispatch.renamed_rs3];
+        }
+
         if(cpu->int_fu.opcode == OPCODE_ADD || cpu->int_fu.opcode == OPCODE_LDR || cpu->int_fu.opcode == OPCODE_STR)
         {
             cpu->int_fu.result_buffer = cpu->phy_regs[cpu->int_fu.renamed_rs1]->reg_value + cpu->phy_regs[cpu->int_fu.renamed_rs2]->reg_value;
@@ -975,6 +1105,9 @@ APEX_cpu_init(const char *filename)
         cpu->phy_regs[i]->reg_flag = -1;
         cpu->phy_regs[i]->reg_value = 0;
         cpu->phy_regs[i]->reg_tag = i;
+        cpu->phy_regs[i]->renamed_bit = 0;
+        cpu->phy_regs[i]->vCount = 0;
+        cpu->phy_regs[i]->cCount = 0;
     }
 
     for(i=8; i<ARCH_REG_FILE_SIZE; i++)
@@ -987,12 +1120,18 @@ APEX_cpu_init(const char *filename)
         cpu->rename_table[i] = i;
     }
 
+    for(i=0; i<PHY_REG_FILE_SIZE; i++)
+    {
+        cpu->dependency_count[i] = 1;
+    }
+
     cpu->lsq_head = 0;
     cpu->lsq_tail = 0;
     cpu->iq_head = 0;
     cpu->iq_tail = 0;
     cpu->rob_head = 0;
     cpu->rob_tail = 0;
+    cpu->fwd_req_list_idx = 0;
 
     /* Parse input file and create code memory */
     cpu->code_memory = create_code_memory(filename, &cpu->code_memory_size);

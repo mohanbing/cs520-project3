@@ -83,7 +83,7 @@ int insert_iq_entry(APEX_CPU* cpu, CPU_Stage *stage) //insert in iq
     if(stage->rd!=-1)
         cpu->iq[cpu->iq_tail]->dst_tag = stage->renamed_rd;
 
-    cpu->iq[cpu->iq_tail]->dispatch = stage;
+    cpu->iq[cpu->iq_tail]->dispatch = *stage;
 
     int tail_idx = cpu->iq_tail;
     cpu->iq_tail++;

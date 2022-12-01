@@ -50,6 +50,9 @@ typedef struct APEX_PHY_REG
     int reg_tag;
     int reg_value;
     int reg_flag;
+    int renamed_bit;
+    int vCount;
+    int cCount;
 } APEX_PHY_REG;
 
 typedef struct IQ_Entry
@@ -79,7 +82,7 @@ typedef struct IQ_Entry
     int lsqindex;
     int robindex;
 
-    CPU_Stage *dispatch;
+    CPU_Stage dispatch;
 
     int request_exec;
     int granted;
@@ -157,6 +160,10 @@ typedef struct APEX_CPU
     int rename_stall;
 
     FORWARDING_BUS forwarding_bus[PHY_REG_FILE_SIZE];
+    CPU_Stage *fwd_bus_req_list[4];
+    int fwd_req_list_idx;
+
+    int dependency_count[PHY_REG_FILE_SIZE];
 
     //iq
     IQ_Entry *iq[IQ_SIZE];
@@ -171,9 +178,6 @@ typedef struct APEX_CPU
     ROB_ENTRY *rob[ROB_SIZE];
     int rob_head;
     int rob_tail;
-
-    CPU_Stage *fwd_bus_req_list[4];
-    int fwd_req_list_idx = 0;
 
     /* Pipeline stages */
     CPU_Stage fetch;
