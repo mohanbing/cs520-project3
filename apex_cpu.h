@@ -6,10 +6,8 @@
 #ifndef _APEX_CPU_H_
 #define _APEX_CPU_H_
 
-#include<stdbool.h>
+#include <stdbool.h>
 #include "apex_macros.h"
-
-#define No_of_IQ_Entry 8
 
 /* Format of an APEX instruction  */
 typedef struct APEX_Instruction
@@ -48,6 +46,7 @@ typedef struct CPU_Stage
 
 typedef struct APEX_PHY_REG
 {
+    int valid;
     int reg_tag;
     int reg_value;
     int reg_flag;
@@ -56,27 +55,37 @@ typedef struct APEX_PHY_REG
 
 typedef struct IQ_Entry
 {
+    int allocated; // allocated/free bit
     int pc;
-    char opcode_str[128];
+    int opcode;
     int counter;
     int free;
     char fu_type[128];
     int imm;
-    //use it for arch register
-    int rs1;
-    int rs2;
-    int rd;
-    APEX_PHY_REG *prs1;
-    APEX_PHY_REG *prs2;
+
+    //physical(renamed) registers
+    int src1_valid;
+    int src2_valid;
+    int src3_valid;
+    
+    int src1_tag;
+    int src2_tag;
+    int src3_tag;
+    int dst_tag;
+
+    int src1_value;
+    int src2_value;
+    int src3_value;
+
     int lsqindex;
     int robindex;
-}IQ_Entry;
 
-typedef struct IQ
-{
-    int iq_free; // flag if iq is free or not
-    IQ_Entry iq_entry[No_of_IQ_Entry];
-}IQ;
+    CPU_Stage *dispatch;
+
+    int request_exec;
+    int granted;
+
+}IQ_Entry;
 
 typedef struct LSQ_Entry
 {
@@ -118,6 +127,12 @@ typedef struct ROB_ENTRY
     //int mem_error_code;           
 }ROB_ENTRY;
 
+typedef struct FORWARDING_BUS
+{
+    int tag_valid;
+    int data_value;
+}FORWARDING_BUS;
+
 /* Model of APEX CPU */
 typedef struct APEX_CPU
 {
@@ -141,9 +156,15 @@ typedef struct APEX_CPU
     int free_list_tail;
     int rename_stall;
 
+    FORWARDING_BUS forwarding_bus[PHY_REG_FILE_SIZE];
+
     //iq
     // IQ_Entry *iq_fifo[No_of_IQ_Entry];
     IQ iq_fifo;
+
+    LSQ_Entry *lsq[LSQ_SIZE];
+    int lsq_head;
+    int lsq_tail;
 
     LSQ_Entry *lsq[LSQ_SIZE];
     int lsq_head;
@@ -158,7 +179,17 @@ typedef struct APEX_CPU
     CPU_Stage fetch;
     CPU_Stage decode_rename1;
     CPU_Stage rename2_dispatch;
+
+    CPU_Stage int_fu;
+
+    CPU_Stage mul_fu1;  // insn always issued to this FU first for MUL
+    CPU_Stage mul_fu2;
+    CPU_Stage mul_fu3;
+    CPU_Stage mul_fu4;
+
     CPU_Stage dcache;
+    CPU_Stage lop_fu;
+
 } APEX_CPU;
 
 APEX_Instruction *create_code_memory(const char *filename, int *size);

@@ -18,6 +18,7 @@
 
 #define ROB_SIZE 12
 #define LSQ_SIZE 4
+#define IQ_SIZE 8
 
 /* Numeric OPCODE identifiers for instructions */
 #define OPCODE_ADD 0x0

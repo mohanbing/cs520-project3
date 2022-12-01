@@ -1,83 +1,229 @@
 #include <stdio.h>
-#include<stdlib.h>
-#include<string.h>
-
-#include "apex_cpu.h";
+#include <stdlib.h>
+#include <string.h>
 #include "apex_iq.h";
 
 
-int check_iq(APEX_CPU *cpu) // iq is free or not
+bool is_iq_free(APEX_CPU *cpu)
 {
-    int i=0;
-    for(i;i<No_of_IQ_Entry;i++)
+    if(cpu->iq_head == cpu->iq_tail && cpu->iq[cpu->iq_head]!=NULL)
     {
-        if(cpu->iq_fifo.iq_entry[i].free)
+        return FALSE;
+    }
+    return TRUE;
+}
+
+int insert_iq_entry(APEX_CPU* cpu, CPU_Stage *stage) //insert in iq
+{
+    cpu->iq[cpu->iq_tail] = (IQ_Entry *)malloc(sizeof(IQ_Entry));
+    cpu->iq[cpu->iq_tail]->allocated = 1;
+    cpu->iq[cpu->iq_tail]->pc = stage->pc;
+    cpu->iq[cpu->iq_tail]->opcode = stage->opcode;
+    // cpu->iq_fifo.iq_entry[index].counter = iq_entry->counter;
+    
+    if(stage->opcode == OPCODE_MUL)
+        strcpy(cpu->iq[cpu->iq_tail]->fu_type, "MulFU");
+    else if(stage->opcode == OPCODE_STR || stage->opcode == OPCODE_STORE || stage->opcode == OPCODE_LOAD || stage->opcode == OPCODE_LDR)
+        strcpy(cpu->iq[cpu->iq_tail]->fu_type, "LdStr");
+    else if(stage->opcode == OPCODE_AND || stage->opcode == OPCODE_OR || stage->opcode == OPCODE_XOR)
+        strcpy(cpu->iq[cpu->iq_tail]->fu_type, "LopFU");
+    else
+        strcpy(cpu->iq[cpu->iq_tail]->fu_type, "IntFU");
+
+    cpu->iq[cpu->iq_tail]->imm = stage->imm;
+
+    if(stage->rs1!=-1)
+    {
+        cpu->iq[cpu->iq_tail]->src1_tag = stage->renamed_rs1;
+        if(cpu->phy_regs[stage->renamed_rs1]->valid==1)
         {
-            cpu->iq_fifo.iq_free = i;
-            return 1;
+            cpu->iq[cpu->iq_tail]->src1_valid = 1;
+            cpu->iq[cpu->iq_tail]->src1_value = cpu->phy_regs[stage->renamed_rs1]->reg_value;
+        }
+        else
+        {
+            cpu->iq[cpu->iq_tail]->src1_valid = 0;
         }
     }
-    return 0;
+    else
+        cpu->iq[cpu->iq_tail]->src1_valid = 1;
+
+    if(stage->rs2!=-1)
+    {
+        cpu->iq[cpu->iq_tail]->src2_tag = stage->renamed_rs2;
+        if(cpu->phy_regs[stage->renamed_rs2]->valid==1)
+        {
+            cpu->iq[cpu->iq_tail]->src2_valid = 1;
+            cpu->iq[cpu->iq_tail]->src2_value = cpu->phy_regs[stage->renamed_rs2]->reg_value;
+        }
+        else
+        {
+            cpu->iq[cpu->iq_tail]->src2_valid = 0;
+        }
+    }
+    else
+        cpu->iq[cpu->iq_tail]->src2_valid = 1;
+
+    if(stage->rs3!=-1)
+    {
+        cpu->iq[cpu->iq_tail]->src3_tag = stage->renamed_rs3;
+        if(cpu->phy_regs[stage->renamed_rs3]->valid==1)
+        {
+            cpu->iq[cpu->iq_tail]->src3_valid = 1;
+            cpu->iq[cpu->iq_tail]->src3_value = cpu->phy_regs[stage->renamed_rs3]->reg_value;
+        }
+        else
+        {
+            cpu->iq[cpu->iq_tail]->src3_valid = 0;
+        }
+    }
+    else
+        cpu->iq[cpu->iq_tail]->src3_valid = 1;
+
+    if(stage->rd!=-1)
+        cpu->iq[cpu->iq_tail]->dst_tag = stage->renamed_rd;
+
+    cpu->iq[cpu->iq_tail]->dispatch = stage;
+
+    int tail_idx = cpu->iq_tail;
+    cpu->iq_tail++;
+    cpu->iq_tail = cpu->iq_tail%IQ_SIZE;
+
+    return tail_idx;
 }
 
-// iq_fifo == iq;
-// iq_free == fre_entry;
-
-int insert_iq_entry(APEX_CPU* cpu,IQ_Entry* iq_entry) //insert in iq
+CPU_Stage* issue_iq(APEX_CPU* cpu, char* fu_type) // 
 {
-    int index;
-    index = cpu->iq_fifo.iq_free;
-    
-    cpu->iq_fifo.iq_entry[index].pc = iq_entry->pc;
-    cpu->iq_fifo.iq_entry[index].opcode_str = iq_entry->opcode_str;
-    cpu->iq_fifo.iq_entry[index].counter = iq_entry->counter;
-    cpu->iq_fifo.iq_entry[index].free = iq_entry->free;
-    cpu->iq_fifo.iq_entry[index].fu_type = iq_entry->fu_type;
-    cpu->iq_fifo.iq_entry[index].imm = iq_entry->imm;
-    cpu->iq_fifo.iq_entry[index].rs1 = iq_entry->rs1;
-    cpu->iq_fifo.iq_entry[index].rs2 = iq_entry->rs2;
-    cpu->iq_fifo.iq_entry[index].rd = iq_entry->rd;
-
-    cpu->iq_fifo.iq_entry[index].prs1->reg_flag = iq_entry->prs1->reg_flag;
-    cpu->iq_fifo.iq_entry[index].prs1->reg_tag = iq_entry->prs1->reg_tag;
-    cpu->iq_fifo.iq_entry[index].prs1->reg_value = iq_entry->prs1->reg_value;
-
-    cpu->iq_fifo.iq_entry[index].prs2->reg_flag = iq_entry->prs2->reg_flag;
-    cpu->iq_fifo.iq_entry[index].prs2->reg_tag = iq_entry->prs2->reg_tag;
-    cpu->iq_fifo.iq_entry[index].prs2->reg_value = iq_entry->prs2->reg_value;
-
-    cpu->iq_fifo.iq_entry[index].lsqindex = iq_entry->lsqindex;
-    cpu->iq_fifo.iq_entry[index].robindex = iq_entry->robindex;
-    return 0;
-}
-
-int issue_iq(APEX_CPU* cpu,char* fu_type) // 
-{
-    // forward this to MulFU
-    if(strcmp(fu_type,"MulFU"))
+    // checks whether insn can be issued to the FU
+    if(strcmp(fu_type,"MulFU")==0)
     {
-        
+        if(cpu->mul_fu1.has_insn==FALSE)
+        {
+            return &(cpu->mul_fu1);
+        }
+        return NULL;
     }
 
-    // forward this to IntFU
-    if(strcmp(fu_type,"IntFU"))
+    if(strcmp(fu_type,"IntFU")==0 || strcmp(fu_type, "LdStr")==0)
     {
-
+        if(cpu->mul_fu1.has_insn==FALSE)
+        {
+            return &(cpu->int_fu);
+        }
+        return NULL;
     }
 
-    // forward this to LopFU
-    if(strcmp(fu_type,"LopFU"))
+    if(strcmp(fu_type,"LopFU")==0)
     {
-
+        if(cpu->mul_fu1.has_insn==FALSE)
+        {
+            return &(cpu->lop_fu);
+        }
+        return NULL;
     }
 }
 
 int flush_iq(APEX_CPU* cpu)
 {
+    int i;
+    for(i=0; i<IQ_SIZE; i++)
+    {
+        free(cpu->iq[i]);
+        cpu->iq[i] = NULL;
+    }
     
+    cpu->iq_head = 0;
+    cpu->iq_tail = 0;
 }
 
 void print_iq(APEX_CPU* cpu)
 {
 
+}
+
+void set_rob_index(APEX_CPU *cpu, int iq_idx, int rob_idx)
+{
+    cpu->iq[iq_idx]->robindex = rob_idx;
+}
+
+void set_lsq_index(APEX_CPU *cpu, int iq_idx, int lsq_idx)
+{
+    cpu->iq[iq_idx]->lsqindex = lsq_idx;
+}
+
+void pickup_forwarded_values(APEX_CPU *cpu)
+{
+    int i;
+    for(i=0; i<IQ_SIZE; i++)
+    {
+        IQ_Entry *iq_entry = cpu->iq;
+        if(iq_entry->allocated)
+        {
+            if(!iq_entry->src1_valid)
+            {
+                if(cpu->forwarding_bus[iq_entry->src1_tag].tag_valid == 1)
+                {
+                    iq_entry->src1_valid = TRUE;
+                }
+            }
+            if(!iq_entry->src2_valid)
+            {
+                if(cpu->forwarding_bus[iq_entry->src2_tag].tag_valid == 1)
+                {
+                    iq_entry->src2_valid = TRUE;
+                }
+            }
+            if(!iq_entry->src3_valid)
+            {
+                if(cpu->forwarding_bus[iq_entry->src3_tag].tag_valid == 1)
+                {
+                    iq_entry->src3_valid = TRUE;
+                }
+            }
+        }
+    }
+}
+
+void wakeup(APEX_CPU *cpu)
+{
+    int i;
+    for(i=0; i<IQ_SIZE; i++)
+    {
+        if(cpu->iq[i]->allocated == 1 && cpu->iq[i]->src1_valid == 1 && cpu->iq[i]->src2_valid == 1 && cpu->iq[i]->src3_valid == 1)
+        {
+            cpu->iq[i]->request_exec = 1;
+        }
+        else
+        {
+            cpu->iq[i]->request_exec = 0;
+        }
+    }
+}
+
+void selection_logic(APEX_CPU *cpu)
+{
+    // if(1) //TODO add selection logic on the basis of availability of FU and corresponding iq entry with request_exec == 1
+    // {
+    //     // set granted field in iq entry as 1 and copy the insn to the allocated FU (call function issue_iq)
+    // }
+    int i;
+    for(i=0; i<IQ_SIZE; i++)
+    {
+        IQ_Entry *iq_entry = cpu->iq[i];
+        if(iq_entry->request_exec)
+        {
+            if(issue_iq(cpu, iq_entry->fu_type)!=NULL)
+            {
+                iq_entry->granted = TRUE;
+                cpu->mul_fu1 = *(iq_entry->dispatch);
+                cpu->mul_fu1.has_insn = TRUE;
+
+                // deletes entry from issue queue
+                free(iq_entry);
+                iq_entry = NULL;
+                cpu->iq_head++;
+                cpu->iq_head = cpu->iq_head % IQ_SIZE;
+            }
+        }
+    }
 }
