@@ -157,28 +157,31 @@ void pickup_forwarded_values(APEX_CPU *cpu)
     int i;
     for(i=0; i<IQ_SIZE; i++)
     {
-        IQ_Entry *iq_entry = cpu->iq[i];
-        if(iq_entry->allocated)
+        if(cpu->iq[i]!=NULL)
         {
-            if(!iq_entry->src1_valid)
+            IQ_Entry *iq_entry = cpu->iq[i];
+            if(iq_entry->allocated)
             {
-                if(cpu->forwarding_bus[iq_entry->src1_tag].tag_valid == 1)
+                if(!iq_entry->src1_valid)
                 {
-                    iq_entry->src1_valid = TRUE;
+                    if(cpu->forwarding_bus[iq_entry->src1_tag].tag_valid == 1)
+                    {
+                        iq_entry->src1_valid = TRUE;
+                    }
                 }
-            }
-            if(!iq_entry->src2_valid)
-            {
-                if(cpu->forwarding_bus[iq_entry->src2_tag].tag_valid == 1)
+                if(!iq_entry->src2_valid)
                 {
-                    iq_entry->src2_valid = TRUE;
+                    if(cpu->forwarding_bus[iq_entry->src2_tag].tag_valid == 1)
+                    {
+                        iq_entry->src2_valid = TRUE;
+                    }
                 }
-            }
-            if(!iq_entry->src3_valid)
-            {
-                if(cpu->forwarding_bus[iq_entry->src3_tag].tag_valid == 1)
+                if(!iq_entry->src3_valid)
                 {
-                    iq_entry->src3_valid = TRUE;
+                    if(cpu->forwarding_bus[iq_entry->src3_tag].tag_valid == 1)
+                    {
+                        iq_entry->src3_valid = TRUE;
+                    }
                 }
             }
         }
@@ -190,13 +193,16 @@ void wakeup(APEX_CPU *cpu)
     int i;
     for(i=0; i<IQ_SIZE; i++)
     {
-        if(cpu->iq[i]->allocated == 1 && cpu->iq[i]->src1_valid == 1 && cpu->iq[i]->src2_valid == 1 && cpu->iq[i]->src3_valid == 1)
+        if(cpu->iq[i]!=NULL)
         {
-            cpu->iq[i]->request_exec = 1;
-        }
-        else
-        {
-            cpu->iq[i]->request_exec = 0;
+            if(cpu->iq[i]->allocated == 1 && cpu->iq[i]->src1_valid == 1 && cpu->iq[i]->src2_valid == 1 && cpu->iq[i]->src3_valid == 1)
+            {
+                cpu->iq[i]->request_exec = 1;
+            }
+            else
+            {
+                cpu->iq[i]->request_exec = 0;
+            }
         }
     }
 }
@@ -210,26 +216,28 @@ void selection_logic(APEX_CPU *cpu)
     int i;
     for(i=0; i<IQ_SIZE; i++)
     {
-        IQ_Entry *iq_entry = cpu->iq[i];
-        //check allocated
-        if(iq_entry->request_exec)
+        if(cpu->iq[i]!=NULL && cpu->iq[i]->allocated==1)
         {
-            CPU_Stage *fu_stage = issue_iq(cpu, iq_entry->fu_type);
-            if(fu_stage!=NULL)
+            IQ_Entry *iq_entry = cpu->iq[i];
+            if(iq_entry->request_exec)
             {
-                iq_entry->granted = TRUE;
-                fu_stage = &iq_entry->dispatch;
-                (*fu_stage).has_insn = TRUE;
-
-                if(fu_stage->rd != -1 && fu_stage->opcode!=OPCODE_MUL)
+                CPU_Stage *fu_stage = issue_iq(cpu, iq_entry->fu_type);
+                if(fu_stage!=NULL)
                 {
-                    request_forwarding_bus_access(cpu, *fu_stage, iq_entry->fu_type);
+                    iq_entry->granted = TRUE;
+                    fu_stage = &iq_entry->dispatch;
+                    (*fu_stage).has_insn = TRUE;
+
+                    if(fu_stage->rd != -1 && fu_stage->opcode!=OPCODE_MUL)
+                    {
+                        request_forwarding_bus_access(cpu, *fu_stage, iq_entry->fu_type);
+                    }
+                    // deletes entry from issue queue
+                    free(iq_entry);
+                    iq_entry = NULL;
+                    cpu->iq_head++;
+                    cpu->iq_head = cpu->iq_head % IQ_SIZE;
                 }
-                // deletes entry from issue queue
-                free(iq_entry);
-                iq_entry = NULL;
-                cpu->iq_head++;
-                cpu->iq_head = cpu->iq_head % IQ_SIZE;
             }
         }
     }

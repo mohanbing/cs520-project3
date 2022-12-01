@@ -34,6 +34,17 @@ print_data_memory(APEX_CPU *cpu)
 }
 
 static void
+print_rename_table(APEX_CPU *cpu)
+{
+    printf("================RENAME TABLE================\n");
+    int i;
+    for(i=0; i<ARCH_REG_FILE_SIZE; i++)
+    {
+        printf("| \t ARCH REG [%d] \t | \t PHY REG = %d \t |\n", i, cpu->rename_table[i]);
+    }
+}
+
+static void
 print_instruction(const CPU_Stage *stage)
 {
     switch (stage->opcode)
@@ -224,6 +235,18 @@ print_arch_reg_file(const APEX_CPU *cpu)
     }
 }
 
+static void
+print_phy_reg_file(const APEX_CPU *cpu)
+{
+    printf("----------\n%s\n----------\n", "State of Physical Register File");
+    int i;
+    for (i = 0; i < PHY_REG_FILE_SIZE ; ++i)
+    {
+        printf("R%-3d\tValue:[%-3d] \t Flag: [%d]", i, cpu->phy_regs[i]->reg_value, cpu->phy_regs[i]->reg_flag);
+        printf("\n");
+    }
+}
+
 /*
  * Fetch Stage of APEX Pipeline
  *
@@ -258,6 +281,11 @@ APEX_fetch(APEX_CPU *cpu)
         cpu->fetch.rs2 = current_ins->rs2;
         cpu->fetch.rs3 = current_ins->rs3;
         cpu->fetch.imm = current_ins->imm;
+
+        cpu->fetch.renamed_rd = -1;
+        cpu->fetch.renamed_rs1 = -1;
+        cpu->fetch.renamed_rs2 = -1;
+        cpu->fetch.renamed_rs3 = -1;
 
         /* Update PC for next instruction */
         cpu->pc += 4;
@@ -1238,7 +1266,10 @@ APEX_cpu_run(APEX_CPU *cpu)
         APEX_decode_rename1(cpu);
         APEX_fetch(cpu);
 
-        print_arch_reg_file(cpu);
+        // print_arch_reg_file(cpu);
+        print_phy_reg_file(cpu);
+        print_rename_table(cpu);
+        print_data_memory(cpu);
 
         if (cpu->single_step)
         {
