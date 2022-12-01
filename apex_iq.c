@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "apex_iq.h";
-
+#include "apex_iq.h"
+#include "forwarding_bus.c"
 
 bool is_iq_free(APEX_CPU *cpu)
 {
@@ -121,9 +121,10 @@ CPU_Stage* issue_iq(APEX_CPU* cpu, char* fu_type) //
         }
         return NULL;
     }
+    return NULL;
 }
 
-int flush_iq(APEX_CPU* cpu)
+void flush_iq(APEX_CPU* cpu)
 {
     int i;
     for(i=0; i<IQ_SIZE; i++)
@@ -156,7 +157,7 @@ void pickup_forwarded_values(APEX_CPU *cpu)
     int i;
     for(i=0; i<IQ_SIZE; i++)
     {
-        IQ_Entry *iq_entry = cpu->iq;
+        IQ_Entry *iq_entry = cpu->iq[i];
         if(iq_entry->allocated)
         {
             if(!iq_entry->src1_valid)
@@ -217,7 +218,7 @@ void selection_logic(APEX_CPU *cpu)
             if(fu_stage!=NULL)
             {
                 iq_entry->granted = TRUE;
-                *fu_stage = *(iq_entry->dispatch);
+                fu_stage = &iq_entry->dispatch;
                 (*fu_stage).has_insn = TRUE;
 
                 if(fu_stage->rd != -1 && fu_stage->opcode!=OPCODE_MUL)

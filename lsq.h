@@ -76,7 +76,7 @@ void delete_lsq_entry(APEX_CPU *cpu)
 {
     free(cpu->lsq[cpu->lsq_head]);
     cpu->lsq_head++;
-    cpu->lsq_head%LSQ_SIZE;
+    cpu->lsq_head=cpu->lsq_head%LSQ_SIZE;
 }
 
 // void move_to_dcache(APEX_CPU *cpu)

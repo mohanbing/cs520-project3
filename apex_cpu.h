@@ -7,6 +7,7 @@
 #define _APEX_CPU_H_
 
 #include <stdbool.h>
+#include <stdlib.h>
 #include "apex_macros.h"
 
 /* Format of an APEX instruction  */
