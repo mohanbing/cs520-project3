@@ -133,6 +133,11 @@ typedef struct FORWARDING_BUS
     int data_value;
 }FORWARDING_BUS;
 
+typedef struct DCACHE_ENTRY
+{
+    LSQ_Entry lsq_entry;   
+} DCACHE_ENTRY;
+
 /* Model of APEX CPU */
 typedef struct APEX_CPU
 {
@@ -159,13 +164,9 @@ typedef struct APEX_CPU
     FORWARDING_BUS forwarding_bus[PHY_REG_FILE_SIZE];
 
     //iq
-    // IQ_Entry *iq_fifo[No_of_IQ_Entry];
-    IQ iq_fifo;
-
-    LSQ_Entry *lsq[LSQ_SIZE];
-    int lsq_head;
-    int lsq_tail;
-
+    IQ_Entry *iq[IQ_SIZE];
+    int iq_head;
+    int iq_tail;
     LSQ_Entry *lsq[LSQ_SIZE];
     int lsq_head;
     int lsq_tail;
@@ -174,6 +175,8 @@ typedef struct APEX_CPU
     ROB_ENTRY *rob[ROB_SIZE];
     int rob_head;
     int rob_tail;
+
+    DCACHE_ENTRY *dcache_entry;
 
     /* Pipeline stages */
     CPU_Stage fetch;

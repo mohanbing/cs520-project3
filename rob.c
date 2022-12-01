@@ -29,6 +29,7 @@ int DeleteRobEntry(APEX_CPU *cpu)
 {
     //delete from head and increment head
     free(cpu->rob[cpu->rob_head]);
+    cpu->rob[cpu->rob_head] = NULL;
     cpu->rob_head = (cpu->rob_head + 1) % ROB_SIZE;
 
     return 1;
@@ -50,10 +51,13 @@ int CommitRobEntry(APEX_CPU *cpu)
         opcode != OPCODE_JUMP 
     )
     {
-        int arch_regiter_index = cpu->rob[cpu->rob_head]->architectural_rd;
-        int arch_register_value = cpu->phy_regs[cpu->rob[cpu->rob_head]->physical_rd]->reg_value;
-        cpu->arch_regs[arch_regiter_index] = arch_register_value;        
-        add_phy_reg_free_list(cpu, cpu->rob[cpu->rob_head]->physical_rd);
+        if(cpu->phy_regs[cpu->rob[cpu->rob_head]->physical_rd]->is_valid)
+        {
+            int arch_regiter_index = cpu->rob[cpu->rob_head]->architectural_rd;
+            int arch_register_value = cpu->phy_regs[cpu->rob[cpu->rob_head]->physical_rd]->reg_value;
+            cpu->arch_regs[arch_regiter_index] = arch_register_value;        
+            add_phy_reg_free_list(cpu, cpu->rob[cpu->rob_head]->physical_rd);
+        }        
     }
     
     //handle compare to update z flag
@@ -72,7 +76,13 @@ int CommitRobEntry(APEX_CPU *cpu)
         cpu->lsq[lsq_index]->renamed_rs2_value_valid && cpu->lsq[lsq_index]->renamed_rs3_value_valid        
     )
     {
-        //Todo: call function from lsq to transfer control to dcache.
+        cpu->dcache_entry = cpu->lsq[lsq_index];
+        //populate the entries in cpu stage.
+        
+
+        free(cpu->lsq[lsq_index]);
+        cpu->lsq[lsq_index] = NULL;
+        // cpu->dcache. = rob[cpu->rob_head];
     }    
     
 
