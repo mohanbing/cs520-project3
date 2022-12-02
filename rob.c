@@ -65,6 +65,10 @@ int CommitRobEntry(APEX_CPU *cpu)
 
     //handle halt
     //return 1 or 0?
+    if(opcode == OPCODE_HALT)
+    {
+        return 1;
+    }
 
     //handle LOAD/LDR and STORE/STR operations
       //check if LSQ entry is valid from LSQ index and head of LSQ is LOAD/LDR and STORE/STR
@@ -77,15 +81,24 @@ int CommitRobEntry(APEX_CPU *cpu)
     )
     {
         cpu->dcache_entry = cpu->lsq[lsq_index];
-        //populate the entries in cpu stage.
-        
+        //populate the entries in cpu stage.        
+        cpu->dcache.pc = cpu->lsq[lsq_index]->pc;
+        //cpu->dcache.opcode_str =
+        cpu->dcache.opcode = cpu->lsq[lsq_index]->opcode;
+        cpu->dcache.renamed_rs1 = cpu->lsq[lsq_index]->renamed_rs1;
+        cpu->dcache.renamed_rs2 = cpu->lsq[lsq_index]->renamed_rs2;
+        cpu->dcache.renamed_rs3 = cpu->lsq[lsq_index]->renamed_rs3;
+        cpu->dcache.renamed_rd = cpu->lsq[lsq_index]->renamed_rd;
+        cpu->dcache.imm = 0;//take this from lsq
+        cpu->dcache.memory_address = cpu->lsq[lsq_index]->mem_addr;
+        cpu->dcache.has_insn = 1;
+        cpu->dcache.rd = cpu->rob[cpu->rob_head]->architectural_rd;
 
         free(cpu->lsq[lsq_index]);
         cpu->lsq[lsq_index] = NULL;
-        // cpu->dcache. = rob[cpu->rob_head];
-    }    
-    
-
+        //add_phy_reg_free_list(cpu, cpu->rob[cpu->rob_head]->physical_rd);
+    }   
+    DeleteRobEntry(cpu);
     return 0;
 }
 

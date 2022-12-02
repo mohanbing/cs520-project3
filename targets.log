@@ -5,8 +5,9 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
+ 
 
-# Make data base, printed on Wed Nov 30 15:27:23 2022
+# Make data base, printed on Fri Dec  2 14:48:40 2022
 
 # Variables
 
@@ -63,7 +64,7 @@ MAKEFILE_LIST := Makefile
 # automatic
 @F = $(notdir $@)
 # environment
-KRB5CCNAME = FILE:/tmp/krb5cc_16001_U3TE725erC
+KRB5CCNAME = FILE:/tmp/krb5cc_16001_Z5DMc3HTQY
 # environment
 XDG_SESSION_TYPE = tty
 # automatic
@@ -97,7 +98,7 @@ MOTD_SHOWN = pam
 # automatic
 ^F = $(notdir $^)
 # environment
-SSH_CLIENT = 74.74.98.255 56267 22
+SSH_CLIENT = 198.255.139.42 54401 22
 # automatic
 ?F = $(notdir $?)
 # automatic
@@ -127,7 +128,7 @@ XDG_RUNTIME_DIR = /run/user/16001
 # makefile (from 'Makefile', line 14)
 CFLAGS = -g -Wall -O0 -DVERSION=$(VERSION)
 # environment
-VSCODE_IPC_HOOK_CLI = /run/user/16001/vscode-ipc-a13446bc-697f-45d1-a4b0-e073295a4594.sock
+VSCODE_IPC_HOOK_CLI = /run/user/16001/vscode-ipc-0d061a13-5ede-4a8a-8be4-a62963c9dd62.sock
 # environment
 XDG_SESSION_CLASS = user
 # environment
@@ -137,7 +138,7 @@ HOME = /home/ivardha1
 # environment
 ELECTRON_RUN_AS_NODE = 1
 # environment
-XDG_SESSION_ID = 830620
+XDG_SESSION_ID = 869673
 # default
 .RECIPEPREFIX := 
 # automatic
@@ -151,7 +152,7 @@ CC = $(CROSS_PREFIX)gcc
 # makefile (from 'Makefile', line 18)
 PROGS = apex_sim
 # environment
-SSH_CONNECTION = 74.74.98.255 56267 128.226.114.201 22
+SSH_CONNECTION = 198.255.139.42 54401 128.226.114.207 22
 # variable set hash-table stats:
 # Load=71/1024=7%, Rehash=0, Collisions=1/107=1%
 
@@ -161,9 +162,9 @@ SSH_CONNECTION = 74.74.98.255 56267 128.226.114.201 22
 
 # Directories
 
-# . (device 53, inode 118688998190): 28 files, no impossibilities.
+# . (device 53, inode 118688998190): 25 files, no impossibilities.
 
-# 28 files, no impossibilities in 1 directories.
+# 25 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -278,9 +279,9 @@ main.o:
 # strcache buffers: 1 (0) / strings = 37 / storage = 333 B / avg = 9 B
 # current buf: size = 8162 B / used = 333 B / count = 37 / avg = 9 B
 
-# strcache performance: lookups = 53 / hit rate = 30%
+# strcache performance: lookups = 50 / hit rate = 26%
 # hash-table stats:
-# Load=37/8192=0%, Rehash=0, Collisions=0/53=0%
-# Finished Make data base on Wed Nov 30 15:27:23 2022
+# Load=37/8192=0%, Rehash=0, Collisions=0/50=0%
+# Finished Make data base on Fri Dec  2 14:48:40 2022
 
  
