@@ -10,6 +10,7 @@
 #include "lsq.h"
 #include "rob.h"
 #include "apex_iq.c"
+#include "dcache.h"
 
 /* Converts the PC(4000 series) into array index for code memory
  *
@@ -203,10 +204,13 @@ print_stage_content(const char *name, const CPU_Stage *stage)
 static void
 add_phy_reg_free_list(APEX_CPU *cpu, int tag)
 {
-    cpu->phy_regs[tag]->is_valid = FALSE;
-    cpu->free_list[cpu->free_list_tail] = tag;
-    cpu->free_list_tail++;
-    cpu->free_list_tail = cpu->free_list_tail%PHY_REG_FILE_SIZE;
+    if(cpu->phy_regs[tag]->renamed_bit && cpu->phy_regs[tag]->vCount == 0 && cpu->phy_regs[tag]->cCount == 0)
+    {
+        cpu->phy_regs[tag]->valid = FALSE;
+        cpu->free_list[cpu->free_list_tail] = tag;
+        cpu->free_list_tail++;
+        cpu->free_list_tail = cpu->free_list_tail%PHY_REG_FILE_SIZE;
+    }    
 }
 
 static void
@@ -936,7 +940,7 @@ APEX_int_fu(APEX_CPU *cpu)
                 // cpu->decode.has_insn = FALSE;
 
                 /* Make sure fetch stage is enabled to start fetching from new PC */
-                // cpu->fetch.has_insn = TRUE;
+                // cpu->fetch.has_insn =  TRUE;
             }
         }
 
@@ -1137,7 +1141,7 @@ APEX_lop_fu(APEX_CPU *cpu)
 static void
 APEX_dcache(APEX_CPU *cpu)
 {
-    
+    CommitLoadStoreInstr(cpu);
 }
 
 /*
@@ -1265,6 +1269,8 @@ APEX_cpu_run(APEX_CPU *cpu)
         APEX_lop_fu(cpu);
         
         //add rob commit functions
+        CommitRobEntry(cpu);
+
 
         selection_logic(cpu);
         wakeup(cpu);

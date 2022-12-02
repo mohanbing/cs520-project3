@@ -22,8 +22,7 @@ int AddRobEntry(APEX_CPU *cpu, CPU_Stage *stage, int lsq_index)
     //add at the tail and inrement tail
     cpu->rob[cpu->rob_tail] = rob_entry;
     cpu->rob_tail = (cpu->rob_tail + 1) % ROB_SIZE;
-
-    return 1;     
+    return rob_idx;     
 }
 
 int DeleteRobEntry(APEX_CPU *cpu)
@@ -52,7 +51,7 @@ int CommitRobEntry(APEX_CPU *cpu)
         opcode != OPCODE_JUMP 
     )
     {
-        if(cpu->phy_regs[cpu->rob[cpu->rob_head]->physical_rd]->is_valid)
+        if(cpu->phy_regs[cpu->rob[cpu->rob_head]->physical_rd]->valid)
         {
             int arch_regiter_index = cpu->rob[cpu->rob_head]->architectural_rd;
             int arch_register_value = cpu->phy_regs[cpu->rob[cpu->rob_head]->physical_rd]->reg_value;
@@ -63,6 +62,7 @@ int CommitRobEntry(APEX_CPU *cpu)
     
     //handle compare to update z flag
     //return 1 
+
 
     //handle halt
     //return 1 or 0?
@@ -90,7 +90,7 @@ int CommitRobEntry(APEX_CPU *cpu)
         cpu->dcache.renamed_rs2 = cpu->lsq[lsq_index]->renamed_rs2;
         cpu->dcache.renamed_rs3 = cpu->lsq[lsq_index]->renamed_rs3;
         cpu->dcache.renamed_rd = cpu->lsq[lsq_index]->renamed_rd;
-        cpu->dcache.imm = 0;//take this from lsq
+        cpu->dcache.imm = 0;//take this from lsq cpu->lsq[lsq_index]->imm;
         cpu->dcache.memory_address = cpu->lsq[lsq_index]->mem_addr;
         cpu->dcache.has_insn = 1;
         cpu->dcache.rd = cpu->rob[cpu->rob_head]->architectural_rd;
