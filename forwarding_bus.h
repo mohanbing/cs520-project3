@@ -4,7 +4,7 @@
 #include "apex_cpu.h"
 
 static void
-request_forwarding_bus_access(APEX_CPU *cpu, CPU_Stage stage, char *fu_type);
+request_forwarding_bus_access(APEX_CPU *cpu, int renamed_rd, char *fu_type);
 
 static void
 process_forwarding_requests(APEX_CPU *cpu);

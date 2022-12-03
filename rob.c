@@ -50,7 +50,7 @@ int CommitRobEntry(APEX_CPU *cpu)
         opcode != OPCODE_JUMP 
     )
     {
-        if(cpu->phy_regs[cpu->rob[cpu->rob_head]->physical_rd]->is_valid)
+        if(cpu->phy_regs[cpu->rob[cpu->rob_head]->physical_rd]->valid)
         {
             int arch_regiter_index = cpu->rob[cpu->rob_head]->architectural_rd;
             int arch_register_value = cpu->phy_regs[cpu->rob[cpu->rob_head]->physical_rd]->reg_value;
@@ -75,7 +75,7 @@ int CommitRobEntry(APEX_CPU *cpu)
         cpu->lsq[lsq_index]->renamed_rs2_value_valid && cpu->lsq[lsq_index]->renamed_rs3_value_valid        
     )
     {
-        cpu->dcache_entry = cpu->lsq[lsq_index];
+        // cpu->dcache_entry = cpu->lsq[lsq_index];
         //populate the entries in cpu stage.
         
 

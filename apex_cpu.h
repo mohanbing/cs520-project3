@@ -51,7 +51,6 @@ typedef struct APEX_PHY_REG
     int reg_tag;
     int reg_value;
     int reg_flag;
-    bool is_valid;
     int renamed_bit;
     int vCount;
     int cCount;
@@ -167,7 +166,7 @@ typedef struct APEX_CPU
     int rename_stall;
 
     FORWARDING_BUS forwarding_bus[PHY_REG_FILE_SIZE];
-    CPU_Stage *fwd_bus_req_list[4];
+    int fwd_bus_req_list[4][10];
     int fwd_req_list_idx;
 
     //iq
@@ -183,7 +182,7 @@ typedef struct APEX_CPU
     int rob_head;
     int rob_tail;
 
-    DCACHE_ENTRY *dcache_entry;
+    // DCACHE_ENTRY *dcache_entry;
 
     /* Pipeline stages */
     CPU_Stage fetch;
@@ -206,5 +205,5 @@ APEX_Instruction *create_code_memory(const char *filename, int *size);
 APEX_CPU *APEX_cpu_init(const char *filename);
 void APEX_cpu_run(APEX_CPU *cpu);
 void APEX_cpu_stop(APEX_CPU *cpu);
-static void add_phy_reg_free_list(APEX_CPU *cpu, int tag);
+void add_phy_reg_free_list(APEX_CPU *cpu, int tag);
 #endif
