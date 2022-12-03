@@ -8,9 +8,9 @@
 #include <string.h>
 
 #include "lsq.h"
-#include "rob.h"
+#include "rob.c"
 #include "apex_iq.c"
-#include "dcache.h"
+#include "dcache.c"
 
 /* Converts the PC(4000 series) into array index for code memory
  *
@@ -43,6 +43,56 @@ print_rename_table(APEX_CPU *cpu)
     {
         printf("| \t ARCH REG [%d] \t | \t PHY REG = %d \t |\n", i, cpu->rename_table[i]);
     }
+}
+
+static void
+print_free_list(APEX_CPU *cpu)
+{
+    printf("================FREE LIST================\n");
+    int i;
+    for(i=0; i<PHY_REG_FILE_SIZE; i++)
+    {
+        if(i==cpu->free_list_head && cpu->free_list_head == cpu->free_list_tail)
+        {
+            printf("HEAD TAIL---> %d\n", cpu->free_list[i]);
+        }
+        else if(i==cpu->free_list_head)
+        {
+            printf("HEAD ---> %d\n", cpu->free_list[i]);
+        }
+        else if(i==cpu->free_list_tail)
+        {
+            printf("TAIL ---> %d\n", cpu->free_list[i]);
+        }
+        else
+            printf("%d\n", cpu->free_list[i]);
+    }
+}
+
+static void
+print_issue_q_entries(APEX_CPU *cpu)
+{
+    printf("================ISSUE QUEUE================\n");
+    int i;
+    for(i=0; i<IQ_SIZE; i++)
+    {
+        if(cpu->iq[i]!=NULL)
+            printf("[ I%d ]", ((cpu->iq[i]->pc-4000)/4)+1);
+    }
+    printf("\n");
+}
+
+static void
+print_rob_entries(APEX_CPU *cpu)
+{
+    printf("================ROB================\n");
+    int i;
+    for(i=0; i<ROB_SIZE; i++)
+    {
+        if(cpu->rob[i]!=NULL)
+            printf("[ I%d ]", ((cpu->rob[i]->pc-4000)/4)+1);
+    }
+    printf("\n");
 }
 
 static void
@@ -199,37 +249,6 @@ print_stage_content(const char *name, const CPU_Stage *stage)
         printf("%-15s: EMPTY", name);
     }
     printf("\n");
-}
-
-static void
-add_phy_reg_free_list(APEX_CPU *cpu, int tag)
-{
-    if(cpu->phy_regs[tag]->renamed_bit && cpu->phy_regs[tag]->vCount == 0 && cpu->phy_regs[tag]->cCount == 0)
-    {
-        cpu->phy_regs[tag]->valid = FALSE;
-        cpu->free_list[cpu->free_list_tail] = tag;
-        cpu->free_list_tail++;
-        cpu->free_list_tail = cpu->free_list_tail%PHY_REG_FILE_SIZE;
-    }    
-}
-
-static void
-rename_table_assign_free_reg(APEX_CPU *cpu, int rd)
-{
-    if(cpu->free_list_head == cpu->free_list_tail)
-    {
-        if(cpu->free_list[cpu->free_list_head] == -1)
-        {
-            cpu->rename_stall = 1;
-            return;
-        }
-    }
-
-    cpu->rename_stall = 0;
-    cpu->phy_regs[cpu->rename_table[rd]]->renamed_bit = 1;
-    cpu->rename_table[rd] = cpu->free_list[cpu->free_list_head];
-    cpu->free_list_head++;
-    cpu->free_list_head = cpu->free_list_head%PHY_REG_FILE_SIZE;
 }
 
 /* Debug function which prints the register file
@@ -785,55 +804,8 @@ APEX_decode_rename1(APEX_CPU *cpu)
 static void
 APEX_rename2_dispatch(APEX_CPU *cpu)
 {
-    if(cpu->rename2_dispatch.renamed_rs1 != -1)
+    if(cpu->rename2_dispatch.has_insn==TRUE)
     {
-        if(cpu->phy_regs[cpu->rename2_dispatch.renamed_rs1]->valid)
-            cpu->rename2_dispatch.rs1_value = cpu->phy_regs[cpu->rename2_dispatch.renamed_rs1]->reg_value;
-    }
-
-    if(cpu->rename2_dispatch.renamed_rs2 != -1)
-    {
-        if(cpu->phy_regs[cpu->rename2_dispatch.renamed_rs2]->valid)
-            cpu->rename2_dispatch.rs2_value = cpu->phy_regs[cpu->rename2_dispatch.renamed_rs2]->reg_value;
-    }
-
-    if(cpu->rename2_dispatch.renamed_rs3 != -1)
-    {
-        if(cpu->phy_regs[cpu->rename2_dispatch.renamed_rs3]->valid)
-            cpu->rename2_dispatch.rs3_value = cpu->phy_regs[cpu->rename2_dispatch.renamed_rs3]->reg_value;
-    }
-        
-    if(cpu->rename2_dispatch.opcode == OPCODE_LDR ||
-        cpu->rename2_dispatch.opcode == OPCODE_LOAD ||
-        cpu->rename2_dispatch.opcode == OPCODE_STORE ||
-        cpu->rename2_dispatch.opcode == OPCODE_STR)
-    {
-        if(is_iq_free(cpu) && is_lsq_free(cpu) && IsRobFree(cpu))
-        {
-            int issue_q_idx = insert_iq_entry(cpu, &cpu->rename2_dispatch);
-            int lsq_idx = add_lsq_entry(cpu, &cpu->rename2_dispatch);
-            int rob_idx = AddRobEntry(cpu, &cpu->rename2_dispatch, lsq_idx);
-            set_rob_idx(cpu, rob_idx, lsq_idx);
-            cpu->rename2_dispatch.has_insn = FALSE;
-        }
-    }
-    else
-    {
-        if(is_iq_free(cpu) && IsRobFree(cpu))
-        {
-            int issue_q_idx = insert_iq_entry(cpu, &cpu->rename2_dispatch);
-            int rob_idx = AddRobEntry(cpu, &cpu->rename2_dispatch, -1);
-            cpu->rename2_dispatch.has_insn = FALSE;
-        }
-    }
-}
-
-static void
-APEX_int_fu(APEX_CPU *cpu)
-{
-    if(cpu->int_fu.has_insn==TRUE)
-    {
-        // pickup values from frwding bus
         if(cpu->rename2_dispatch.renamed_rs1 != -1)
         {
             if(cpu->phy_regs[cpu->rename2_dispatch.renamed_rs1]->valid)
@@ -850,6 +822,64 @@ APEX_int_fu(APEX_CPU *cpu)
         {
             if(cpu->phy_regs[cpu->rename2_dispatch.renamed_rs3]->valid)
                 cpu->rename2_dispatch.rs3_value = cpu->phy_regs[cpu->rename2_dispatch.renamed_rs3]->reg_value;
+        }
+            
+        if(cpu->rename2_dispatch.opcode == OPCODE_LDR ||
+            cpu->rename2_dispatch.opcode == OPCODE_LOAD ||
+            cpu->rename2_dispatch.opcode == OPCODE_STORE ||
+            cpu->rename2_dispatch.opcode == OPCODE_STR)
+        {
+            if(is_iq_free(cpu) && is_lsq_free(cpu) && IsRobFree(cpu))
+            {
+                int lsq_idx = add_lsq_entry(cpu, &cpu->rename2_dispatch);
+                int rob_idx = AddRobEntry(cpu, &cpu->rename2_dispatch, lsq_idx);
+                set_rob_idx(cpu, rob_idx, lsq_idx);
+                cpu->rename2_dispatch.has_insn = FALSE;
+            }
+        }
+        else
+        {
+            if(is_iq_free(cpu) && IsRobFree(cpu))
+            {
+                int issue_q_idx = insert_iq_entry(cpu, &cpu->rename2_dispatch);
+                int rob_idx = AddRobEntry(cpu, &cpu->rename2_dispatch, -1);
+                cpu->rename2_dispatch.has_insn = FALSE;
+            }
+        }
+        if (ENABLE_DEBUG_MESSAGES)
+        {
+            print_stage_content("Rename2/Dispatch", &cpu->rename2_dispatch);
+        }
+    }
+    else
+    {
+        if (ENABLE_DEBUG_MESSAGES)
+        {
+            print_stage_content("Rename2/Dispatch", NULL);
+        }
+    }
+}
+
+static void
+APEX_int_fu(APEX_CPU *cpu)
+{
+    if(cpu->int_fu.has_insn==TRUE)
+    {
+        // pickup values from frwding bus
+        if(cpu->int_fu.renamed_rs1 != -1)
+        {
+            if(cpu->phy_regs[cpu->int_fu.renamed_rs1]->valid)
+                cpu->int_fu.rs1_value = cpu->phy_regs[cpu->int_fu.renamed_rs1]->reg_value;
+            else
+                cpu->int_fu.rs1_value = cpu->forwarding_bus[cpu->int_fu.renamed_rs1].data_value;
+        }
+
+        if(cpu->int_fu.renamed_rs2 != -1)
+        {
+            if(cpu->phy_regs[cpu->int_fu.renamed_rs2]->valid)
+                cpu->int_fu.rs2_value = cpu->phy_regs[cpu->int_fu.renamed_rs2]->reg_value;
+            else
+                cpu->int_fu.rs2_value = cpu->forwarding_bus[cpu->int_fu.renamed_rs2].data_value;
         }
 
         if(cpu->int_fu.opcode == OPCODE_ADD || cpu->int_fu.opcode == OPCODE_LDR || cpu->int_fu.opcode == OPCODE_STR)
@@ -944,13 +974,16 @@ APEX_int_fu(APEX_CPU *cpu)
             }
         }
 
-        print_stage_content("INT FU -->", &cpu->int_fu);
-        if(cpu->forwarding_bus[cpu->int_fu.renamed_rd].tag_valid==1)
-            cpu->forwarding_bus[cpu->int_fu.renamed_rd].data_value = cpu->int_fu.result_buffer;
-        else
+        else if(cpu->int_fu.opcode == OPCODE_MOVC)
         {
-            request_forwarding_bus_access(cpu, cpu->int_fu, "IntFU");
+            cpu->int_fu.result_buffer = cpu->int_fu.imm;
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
         }
+
+        print_stage_content("INT FU -->", &cpu->int_fu);
+
+        cpu->int_fu.has_insn = FALSE;
     }
     else if(cpu->int_fu.has_insn == FALSE)
     {
@@ -964,6 +997,22 @@ APEX_mul_fu1(APEX_CPU *cpu)
 {
     if(cpu->mul_fu1.has_insn == TRUE)
     {
+        if(cpu->mul_fu1.renamed_rs1 != -1)
+        {
+            if(cpu->phy_regs[cpu->mul_fu1.renamed_rs1]->valid)
+                cpu->mul_fu1.rs1_value = cpu->phy_regs[cpu->mul_fu1.renamed_rs1]->reg_value;
+            else
+                cpu->mul_fu1.rs1_value = cpu->forwarding_bus[cpu->mul_fu1.renamed_rs1].data_value;
+        }
+
+        if(cpu->mul_fu1.renamed_rs2 != -1)
+        {
+            if(cpu->phy_regs[cpu->mul_fu1.renamed_rs2]->valid)
+                cpu->mul_fu1.rs2_value = cpu->phy_regs[cpu->mul_fu1.renamed_rs2]->reg_value;
+            else
+                cpu->mul_fu1.rs2_value = cpu->forwarding_bus[cpu->mul_fu1.renamed_rs2].data_value;
+        }
+
         if(cpu->mul_fu1.opcode == OPCODE_MUL)
         {
             cpu->mul_fu1.result_buffer = cpu->phy_regs[cpu->mul_fu1.renamed_rs1]->reg_value * cpu->phy_regs[cpu->mul_fu1.renamed_rs2]->reg_value;
@@ -1042,7 +1091,7 @@ APEX_mul_fu3(APEX_CPU *cpu)
                 cpu->mul_fu4 = cpu->mul_fu3;
                 cpu->mul_fu3.has_insn = FALSE;
             }
-            request_forwarding_bus_access(cpu, cpu->mul_fu3, "MulFU");
+            request_forwarding_bus_access(cpu, cpu->mul_fu3.renamed_rd, "MulFU");
         }
     }
     else
@@ -1068,14 +1117,7 @@ APEX_mul_fu4(APEX_CPU *cpu)
                 cpu->phy_regs[cpu->mul_fu4.renamed_rd]->reg_flag = 0;
             
             print_stage_content("MUL FU 4-->", &cpu->mul_fu4);
-            
-            // add forwarding logic
-            if(cpu->forwarding_bus[cpu->mul_fu4.renamed_rd].tag_valid==1)
-                cpu->forwarding_bus[cpu->mul_fu4.renamed_rd].data_value = cpu->mul_fu4.result_buffer;
-            else
-            {
-                request_forwarding_bus_access(cpu, cpu->mul_fu4, "MulFU");
-            }
+            cpu->mul_fu4.has_insn = FALSE;
         }
     }
     else
@@ -1089,6 +1131,22 @@ APEX_lop_fu(APEX_CPU *cpu)
 {
     if(cpu->lop_fu.has_insn==TRUE)
     {
+        if(cpu->lop_fu.renamed_rs1 != -1)
+        {
+            if(cpu->phy_regs[cpu->lop_fu.renamed_rs1]->valid)
+                cpu->lop_fu.rs1_value = cpu->phy_regs[cpu->lop_fu.renamed_rs1]->reg_value;
+            else
+                cpu->lop_fu.rs1_value = cpu->forwarding_bus[cpu->lop_fu.renamed_rs1].data_value;
+        }
+
+        if(cpu->lop_fu.renamed_rs2 != -1)
+        {
+            if(cpu->phy_regs[cpu->lop_fu.renamed_rs2]->valid)
+                cpu->lop_fu.rs2_value = cpu->phy_regs[cpu->lop_fu.renamed_rs2]->reg_value;
+            else
+                cpu->lop_fu.rs2_value = cpu->forwarding_bus[cpu->lop_fu.renamed_rs2].data_value;
+        }
+
         if(cpu->lop_fu.opcode == OPCODE_OR)
         {
             cpu->lop_fu.result_buffer = cpu->phy_regs[cpu->lop_fu.renamed_rs1]->reg_value | cpu->phy_regs[cpu->lop_fu.renamed_rs2]->reg_value;
@@ -1124,12 +1182,7 @@ APEX_lop_fu(APEX_CPU *cpu)
         }
 
         print_stage_content("LOP FU -->", &cpu->lop_fu);
-        if(cpu->forwarding_bus[cpu->lop_fu.renamed_rd].tag_valid==1)
-            cpu->forwarding_bus[cpu->lop_fu.renamed_rd].data_value = cpu->lop_fu.result_buffer;
-        else
-        {
-            request_forwarding_bus_access(cpu, cpu->lop_fu, "LopFU");
-        }
+        cpu->lop_fu.has_insn = FALSE;
 
     }
     else
@@ -1172,6 +1225,15 @@ APEX_cpu_init(const char *filename)
     memset(cpu->data_memory, 0, sizeof(int) * DATA_MEMORY_SIZE);
     cpu->single_step = ENABLE_SINGLE_STEP;
 
+    for(i=0; i<4; i++)
+    {
+        int j;
+        for(j=0; j<10; j++)
+        {
+            cpu->fwd_bus_req_list[i][j] = -1;
+        }
+    }
+
     for(i=0; i<PHY_REG_FILE_SIZE; i++)
     {
         cpu->phy_regs[i] = malloc(sizeof(APEX_PHY_REG));
@@ -1191,7 +1253,12 @@ APEX_cpu_init(const char *filename)
 
     for(i=8; i<PHY_REG_FILE_SIZE; i++)
     {
-        cpu->free_list[i] = i;
+        cpu->free_list[i] = -1;
+    }
+
+    for(i=8; i<PHY_REG_FILE_SIZE; i++)
+    {
+        cpu->free_list[i-8] = i;
     }
 
     for(i=0; i<ARCH_REG_FILE_SIZE; i++)
@@ -1209,6 +1276,8 @@ APEX_cpu_init(const char *filename)
     cpu->rob_head = 0;
     cpu->rob_tail = 0;
     cpu->fwd_req_list_idx = 0;
+    cpu->free_list_head = 0;
+    cpu->free_list_tail = 6;
 
     /* Parse input file and create code memory */
     cpu->code_memory = create_code_memory(filename, &cpu->code_memory_size);
@@ -1260,14 +1329,6 @@ APEX_cpu_run(APEX_CPU *cpu)
             printf("--------------------------------------------\n");
         }
 
-        APEX_int_fu(cpu);
-        APEX_dcache(cpu);
-        APEX_mul_fu4(cpu);
-        APEX_mul_fu3(cpu);
-        APEX_mul_fu2(cpu);
-        APEX_mul_fu1(cpu);
-        APEX_lop_fu(cpu);
-        
         //add rob commit functions
 
         if(CommitRobEntry(cpu))
@@ -1276,19 +1337,31 @@ APEX_cpu_run(APEX_CPU *cpu)
             break;
         }
 
-        selection_logic(cpu);
-        wakeup(cpu);
+        APEX_int_fu(cpu);
+        APEX_dcache(cpu);
+        APEX_mul_fu4(cpu);
+        APEX_mul_fu3(cpu);
+        APEX_mul_fu2(cpu);
+        APEX_mul_fu1(cpu);
+        APEX_lop_fu(cpu);
+        
         pickup_forwarded_values(cpu);
+        wakeup(cpu);
+        selection_logic(cpu);
         process_forwarding_requests(cpu);
 
         APEX_rename2_dispatch(cpu);
         APEX_decode_rename1(cpu);
         APEX_fetch(cpu);
 
-        // print_arch_reg_file(cpu);
+        print_issue_q_entries(cpu);
+        print_rob_entries(cpu);
+        print_arch_reg_file(cpu);
         print_phy_reg_file(cpu);
         print_rename_table(cpu);
         print_data_memory(cpu);
+        print_free_list(cpu);
+        
 
         if (cpu->single_step)
         {

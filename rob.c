@@ -1,18 +1,21 @@
 #include <stdio.h>
 #include <stddef.h>
 #include "rob.h"
+#include "phy_regs.c"
 
 bool IsRobFree(APEX_CPU *cpu)
 {
     return cpu->rob[cpu->rob_tail] == NULL;
 }
 
+
+
 int AddRobEntry(APEX_CPU *cpu, CPU_Stage *stage, int lsq_index)
 {
     ROB_ENTRY *rob_entry = (ROB_ENTRY*)malloc(sizeof(ROB_ENTRY));
     rob_entry->pc = stage->pc;
     rob_entry->architectural_rd = stage->rs1;
-    rob_entry->physical_rd = stage->renamed_rs1;
+    rob_entry->physical_rd = stage->renamed_rd;
     rob_entry->dcache_bit = 0;
     rob_entry->establised_bit = 1;
     rob_entry->instruction_type = stage->opcode; //store opcode value
@@ -37,6 +40,8 @@ int DeleteRobEntry(APEX_CPU *cpu)
 
 int CommitRobEntry(APEX_CPU *cpu)
 {
+    if(cpu->rob[cpu->rob_head]==NULL)
+        return 0;
     //commit the entry from head to maintain program order
     int opcode = cpu->rob[cpu->rob_head]->instruction_type;
     int lsq_index = cpu->rob[cpu->rob_head]->lsq_index;
@@ -70,20 +75,20 @@ int CommitRobEntry(APEX_CPU *cpu)
     if(opcode == OPCODE_HALT)
     {
         return 1;
-        DeleteRobEntry(cpu);
+        //DeleteRobEntry(cpu);
     }
 
     //handle LOAD/LDR and STORE/STR operations
       //check if LSQ entry is valid from LSQ index and head of LSQ is LOAD/LDR and STORE/STR
       //perform a memory update via D-Cache
-    if
-    (
+    if(
+        cpu->lsq[cpu->lsq_head]!=NULL &&
         cpu->rob[cpu->rob_head]->pc == cpu->lsq[lsq_index]->pc &&
         cpu->lsq[lsq_index]->mem_addr_valid && cpu->lsq[lsq_index]->renamed_rs1_value_valid && 
         cpu->lsq[lsq_index]->renamed_rs2_value_valid && cpu->lsq[lsq_index]->renamed_rs3_value_valid        
     )
     {
-        cpu->dcache_entry = cpu->lsq[lsq_index];
+        // cpu->dcache_entry = cpu->lsq[lsq_index];
         //populate the entries in cpu stage.        
         cpu->dcache.pc = cpu->lsq[lsq_index]->pc;
         //cpu->dcache.opcode_str =
@@ -99,8 +104,8 @@ int CommitRobEntry(APEX_CPU *cpu)
 
         free(cpu->lsq[lsq_index]);
         cpu->lsq[lsq_index] = NULL;
-        DeleteRobEntry(cpu);
-        //add_phy_reg_free_list(cpu, cpu->rob[cpu->rob_head]->physical_rd);
+        // DeleteRobEntry(cpu);
+        // add_phy_reg_free_list(cpu, cpu->rob[cpu->rob_head]->physical_rd);
     }   
     
     return 0;

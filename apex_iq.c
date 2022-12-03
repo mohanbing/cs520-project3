@@ -4,7 +4,7 @@
 #include "apex_iq.h"
 #include "forwarding_bus.c"
 
-bool is_iq_free(APEX_CPU *cpu)
+static bool is_iq_free(APEX_CPU *cpu)
 {
     if(cpu->iq_head == cpu->iq_tail && cpu->iq[cpu->iq_head]!=NULL)
     {
@@ -13,7 +13,7 @@ bool is_iq_free(APEX_CPU *cpu)
     return TRUE;
 }
 
-int insert_iq_entry(APEX_CPU* cpu, CPU_Stage *stage) //insert in iq
+static int insert_iq_entry(APEX_CPU* cpu, CPU_Stage *stage) //insert in iq
 {
     cpu->iq[cpu->iq_tail] = (IQ_Entry *)malloc(sizeof(IQ_Entry));
     cpu->iq[cpu->iq_tail]->allocated = 1;
@@ -92,6 +92,7 @@ int insert_iq_entry(APEX_CPU* cpu, CPU_Stage *stage) //insert in iq
     return tail_idx;
 }
 
+static
 CPU_Stage* issue_iq(APEX_CPU* cpu, char* fu_type) // 
 {
     // checks whether insn can be issued to the FU
@@ -104,7 +105,7 @@ CPU_Stage* issue_iq(APEX_CPU* cpu, char* fu_type) //
         return NULL;
     }
 
-    if(strcmp(fu_type,"IntFU")==0 || strcmp(fu_type, "LdStr")==0)
+    if(strcmp(fu_type,"IntFU")==0)
     {
         if(cpu->mul_fu1.has_insn==FALSE)
         {
@@ -188,7 +189,7 @@ void pickup_forwarded_values(APEX_CPU *cpu)
     }
 }
 
-void wakeup(APEX_CPU *cpu)
+static void wakeup(APEX_CPU *cpu)
 {
     int i;
     for(i=0; i<IQ_SIZE; i++)
@@ -207,12 +208,32 @@ void wakeup(APEX_CPU *cpu)
     }
 }
 
-void selection_logic(APEX_CPU *cpu)
+static void
+decrement_vcount(APEX_CPU *cpu, int renamed_rs1, int renamed_rs2, int renamed_rs3)
 {
-    // if(1) //TODO add selection logic on the basis of availability of FU and corresponding iq entry with request_exec == 1
-    // {
-    //     // set granted field in iq entry as 1 and copy the insn to the allocated FU (call function issue_iq)
-    // }
+    if(renamed_rs1!=-1)
+        cpu->phy_regs[renamed_rs1]->vCount--;
+    
+    if(renamed_rs2!=-1)
+        cpu->phy_regs[renamed_rs2]->vCount--;
+
+    if(renamed_rs3!=-1)
+        cpu->phy_regs[renamed_rs3]->vCount--;
+
+}
+
+static void
+decrement_ccount(APEX_CPU *cpu, int renamed_rd, int opcode)
+{
+    if(opcode == OPCODE_BNZ || opcode == OPCODE_BZ)
+    if(renamed_rd!=-1)
+        cpu->phy_regs[renamed_rd]->cCount--;
+    
+}
+
+static void
+selection_logic(APEX_CPU *cpu)
+{
     int i;
     for(i=0; i<IQ_SIZE; i++)
     {
@@ -225,16 +246,21 @@ void selection_logic(APEX_CPU *cpu)
                 if(fu_stage!=NULL)
                 {
                     iq_entry->granted = TRUE;
-                    fu_stage = &iq_entry->dispatch;
+                    *fu_stage = iq_entry->dispatch;
                     (*fu_stage).has_insn = TRUE;
+                    char fu_type[10];
+                    strcpy(fu_type, iq_entry->fu_type);
+
+                    decrement_vcount(cpu, fu_stage->renamed_rs1, fu_stage->renamed_rs2, fu_stage->renamed_rs3);
+                    decrement_ccount(cpu, fu_stage->renamed_rd, fu_stage->opcode);
 
                     if(fu_stage->rd != -1 && fu_stage->opcode!=OPCODE_MUL)
                     {
-                        request_forwarding_bus_access(cpu, *fu_stage, iq_entry->fu_type);
+                        request_forwarding_bus_access(cpu, fu_stage->renamed_rd, fu_type);
                     }
                     // deletes entry from issue queue
                     free(iq_entry);
-                    iq_entry = NULL;
+                    cpu->iq[i]=NULL;
                     cpu->iq_head++;
                     cpu->iq_head = cpu->iq_head % IQ_SIZE;
                 }
