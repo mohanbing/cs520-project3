@@ -51,7 +51,6 @@ typedef struct APEX_PHY_REG
     int reg_tag;
     int reg_value;
     int reg_flag;
-    bool is_valid;
     int renamed_bit;
     int vCount;
     int cCount;
