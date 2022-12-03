@@ -1269,8 +1269,12 @@ APEX_cpu_run(APEX_CPU *cpu)
         APEX_lop_fu(cpu);
         
         //add rob commit functions
-        CommitRobEntry(cpu);
 
+        if(CommitRobEntry(cpu))
+        {
+            //halt on rob's head
+            break;
+        }
 
         selection_logic(cpu);
         wakeup(cpu);

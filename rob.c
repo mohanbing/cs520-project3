@@ -57,6 +57,7 @@ int CommitRobEntry(APEX_CPU *cpu)
             int arch_register_value = cpu->phy_regs[cpu->rob[cpu->rob_head]->physical_rd]->reg_value;
             cpu->arch_regs[arch_regiter_index] = arch_register_value;        
             add_phy_reg_free_list(cpu, cpu->rob[cpu->rob_head]->physical_rd);
+            DeleteRobEntry(cpu);
         }        
     }
     
@@ -69,6 +70,7 @@ int CommitRobEntry(APEX_CPU *cpu)
     if(opcode == OPCODE_HALT)
     {
         return 1;
+        DeleteRobEntry(cpu);
     }
 
     //handle LOAD/LDR and STORE/STR operations
@@ -97,9 +99,10 @@ int CommitRobEntry(APEX_CPU *cpu)
 
         free(cpu->lsq[lsq_index]);
         cpu->lsq[lsq_index] = NULL;
+        DeleteRobEntry(cpu);
         //add_phy_reg_free_list(cpu, cpu->rob[cpu->rob_head]->physical_rd);
     }   
-    DeleteRobEntry(cpu);
+    
     return 0;
 }
 
