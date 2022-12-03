@@ -51,6 +51,7 @@ typedef struct APEX_PHY_REG
     int reg_tag;
     int reg_value;
     int reg_flag;
+    bool is_valid;
     int renamed_bit;
     int vCount;
     int cCount;
@@ -128,7 +129,7 @@ typedef struct ROB_ENTRY
     int lsq_index;                  //load store queue index    
     int dcache_bit;                 //dcache accessed bit
     // int overwritten_entry;       //overwritten rename table entry; not needed
-    //int mem_error_code;           //
+    //int mem_error_code;           
 }ROB_ENTRY;
 
 typedef struct FORWARDING_BUS
@@ -136,6 +137,11 @@ typedef struct FORWARDING_BUS
     int tag_valid;
     int data_value;
 }FORWARDING_BUS;
+
+typedef struct DCACHE_ENTRY
+{
+    LSQ_Entry lsq_entry;   
+} DCACHE_ENTRY;
 
 /* Model of APEX CPU */
 typedef struct APEX_CPU
@@ -153,7 +159,7 @@ typedef struct APEX_CPU
 
     int arch_regs[ARCH_REG_FILE_SIZE];       /* Integer register file */
     APEX_PHY_REG *phy_regs[PHY_REG_FILE_SIZE];
-
+    
     int free_list[PHY_REG_FILE_SIZE];
     int rename_table[PHY_REG_FILE_SIZE];
     int free_list_head;
@@ -168,7 +174,6 @@ typedef struct APEX_CPU
     IQ_Entry *iq[IQ_SIZE];
     int iq_head;
     int iq_tail;
-
     LSQ_Entry *lsq[LSQ_SIZE];
     int lsq_head;
     int lsq_tail;
@@ -177,6 +182,8 @@ typedef struct APEX_CPU
     ROB_ENTRY *rob[ROB_SIZE];
     int rob_head;
     int rob_tail;
+
+    DCACHE_ENTRY *dcache_entry;
 
     /* Pipeline stages */
     CPU_Stage fetch;
@@ -199,4 +206,5 @@ APEX_Instruction *create_code_memory(const char *filename, int *size);
 APEX_CPU *APEX_cpu_init(const char *filename);
 void APEX_cpu_run(APEX_CPU *cpu);
 void APEX_cpu_stop(APEX_CPU *cpu);
+static void add_phy_reg_free_list(APEX_CPU *cpu, int tag);
 #endif
