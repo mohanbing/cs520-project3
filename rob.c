@@ -57,11 +57,16 @@ int CommitRobEntry(APEX_CPU *cpu)
     {
         if(cpu->phy_regs[cpu->rob[cpu->rob_head]->physical_rd]->valid)
         {
+
             int arch_regiter_index = cpu->rob[cpu->rob_head]->architectural_rd;
             int arch_register_value = cpu->phy_regs[cpu->rob[cpu->rob_head]->physical_rd]->reg_value;
             cpu->arch_regs[arch_regiter_index] = arch_register_value;        
             DeleteRobEntry(cpu);
         }        
+    }
+    else if (opcode == OPCODE_STORE || opcode == OPCODE_STR)
+    {
+        DeleteRobEntry(cpu);
     }
 
     add_phy_reg_free_list(cpu);
@@ -81,7 +86,10 @@ int CommitRobEntry(APEX_CPU *cpu)
     //handle LOAD/LDR and STORE/STR operations
       //check if LSQ entry is valid from LSQ index and head of LSQ is LOAD/LDR and STORE/STR
       //perform a memory update via D-Cache
-    int lsq_index = cpu->rob[cpu->rob_head]->lsq_index;
+    int lsq_index=-1;
+    if(cpu->rob[cpu->rob_head]!=NULL)
+        lsq_index = cpu->rob[cpu->rob_head]->lsq_index;
+    
     if(
         lsq_index!=-1 &&
         cpu->rob[cpu->rob_head]->pc == cpu->lsq[lsq_index]->pc &&
@@ -92,13 +100,19 @@ int CommitRobEntry(APEX_CPU *cpu)
         // cpu->dcache_entry = cpu->lsq[lsq_index];
         //populate the entries in cpu stage.        
         cpu->dcache.pc = cpu->lsq[lsq_index]->pc;
-        //cpu->dcache.opcode_str =
+        strcpy(cpu->dcache.opcode_str, cpu->lsq[lsq_index]->opcode_str);
+
+        cpu->dcache.rs1 = cpu->lsq[lsq_index]->arch_rs1;
+        cpu->dcache.rs2 = cpu->lsq[lsq_index]->arch_rs2;
+        cpu->dcache.rs3 = cpu->lsq[lsq_index]->arch_rs3;
+        cpu->dcache.rd = cpu->lsq[lsq_index]->arch_rd;
+
         cpu->dcache.opcode = cpu->lsq[lsq_index]->opcode;
         cpu->dcache.renamed_rs1 = cpu->lsq[lsq_index]->renamed_rs1;
         cpu->dcache.renamed_rs2 = cpu->lsq[lsq_index]->renamed_rs2;
         cpu->dcache.renamed_rs3 = cpu->lsq[lsq_index]->renamed_rs3;
         cpu->dcache.renamed_rd = cpu->lsq[lsq_index]->renamed_rd;
-        cpu->dcache.imm = 0;//take this from lsq cpu->lsq[lsq_index]->imm;
+        cpu->dcache.imm = cpu->lsq[lsq_index]->imm;
         cpu->dcache.memory_address = cpu->lsq[lsq_index]->mem_addr;
         cpu->dcache.has_insn = 1;
         cpu->dcache.rd = cpu->rob[cpu->rob_head]->architectural_rd;

@@ -15,6 +15,7 @@ int add_lsq_entry(APEX_CPU *cpu, CPU_Stage *stage)
     cpu->lsq[cpu->lsq_tail] = (LSQ_Entry*)malloc(sizeof(LSQ_Entry));
     cpu->lsq[cpu->lsq_tail]->lsq_estd = 1;
     cpu->lsq[cpu->lsq_tail]->opcode = stage->opcode;
+    strcpy(cpu->lsq[cpu->lsq_tail]->opcode_str, stage->opcode_str);
     cpu->lsq[cpu->lsq_tail]->pc = stage->pc;
     cpu->lsq[cpu->lsq_tail]->imm = stage->imm;
     
@@ -27,7 +28,7 @@ int add_lsq_entry(APEX_CPU *cpu, CPU_Stage *stage)
     else if(stage->opcode == OPCODE_STR || stage->opcode == OPCODE_STORE)
         cpu->lsq[cpu->lsq_tail]->load_str = 1;
     
-    cpu->lsq[cpu->lsq_tail]->mem_addr_valid = 0;
+    cpu->lsq[cpu->lsq_tail]->mem_addr_valid = 1;
     cpu->lsq[cpu->lsq_tail]->mem_addr = -1;
 
     if(stage->renamed_rs1!=-1)
@@ -68,7 +69,6 @@ int add_lsq_entry(APEX_CPU *cpu, CPU_Stage *stage)
         cpu->lsq[cpu->lsq_tail]->renamed_rs3_value_valid = 1;
         cpu->lsq[cpu->lsq_tail]->renamed_rs3 = -1;
     }
-    cpu->lsq[cpu->lsq_tail]->disptach = stage;
 
     int lsq_idx = cpu->lsq_tail;
     cpu->lsq_tail++;

@@ -298,7 +298,8 @@ print_phy_reg_file(const APEX_CPU *cpu)
     int i;
     for (i = 0; i < PHY_REG_FILE_SIZE ; ++i)
     {
-        printf("R%-3d\tValue:[%-3d] \t Flag: [%d]", i, cpu->phy_regs[i]->reg_value, cpu->phy_regs[i]->reg_flag);
+        printf("P%-3d\tValue:[%-3d] \t Flag: [%d] \t Valid: [%d]", i, cpu->phy_regs[i]->reg_value, cpu->phy_regs[i]->reg_flag, 
+                    cpu->phy_regs[i]->valid);
         printf("\n");
     }
 }
@@ -772,29 +773,34 @@ APEX_decode_rename1(APEX_CPU *cpu)
                     cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
                     if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
                         cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
+                    insn_renamed=1;
                 }
                 break;
             }
 
             case OPCODE_NOP:
             {
+                insn_renamed=1;
                 break;
             }
 
             case OPCODE_BZ:
             {
                 cpu->phy_regs[cpu->zero_flag]->cCount++;
+                insn_renamed=1;
                 break;
             }
 
             case OPCODE_BNZ:
             {
                 cpu->phy_regs[cpu->zero_flag]->cCount++;
+                insn_renamed=1;
                 break;
             }
 
             case OPCODE_HALT:
             {
+                insn_renamed=1;
                 break;
             }
         }
@@ -906,9 +912,9 @@ APEX_int_fu(APEX_CPU *cpu)
                 cpu->int_fu.rs2_value = cpu->forwarding_bus[cpu->int_fu.renamed_rs2].data_value;
         }
 
-        if(cpu->int_fu.opcode == OPCODE_ADD || cpu->int_fu.opcode == OPCODE_LDR || cpu->int_fu.opcode == OPCODE_STR)
+        if(cpu->int_fu.opcode == OPCODE_ADD)
         {
-            cpu->int_fu.result_buffer = cpu->phy_regs[cpu->int_fu.renamed_rs1]->reg_value + cpu->phy_regs[cpu->int_fu.renamed_rs2]->reg_value;
+            cpu->int_fu.result_buffer = cpu->int_fu.rs1_value + cpu->int_fu.rs2_value;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
 
@@ -917,9 +923,9 @@ APEX_int_fu(APEX_CPU *cpu)
             else
                 cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = 0;
         }
-        else if(cpu->int_fu.opcode == OPCODE_ADDL || cpu->int_fu.opcode == OPCODE_LOAD || cpu->int_fu.opcode == OPCODE_STORE)
+        else if(cpu->int_fu.opcode == OPCODE_ADDL)
         {
-            cpu->int_fu.result_buffer = cpu->phy_regs[cpu->int_fu.renamed_rs1]->reg_value + cpu->rename2_dispatch.imm;
+            cpu->int_fu.result_buffer = cpu->int_fu.rs1_value + cpu->rename2_dispatch.imm;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
 
@@ -930,7 +936,7 @@ APEX_int_fu(APEX_CPU *cpu)
         }
         else if(cpu->int_fu.opcode == OPCODE_SUB)
         {
-            cpu->int_fu.result_buffer = cpu->phy_regs[cpu->int_fu.renamed_rs1]->reg_value - cpu->phy_regs[cpu->int_fu.renamed_rs2]->reg_value;
+            cpu->int_fu.result_buffer = cpu->int_fu.rs1_value - cpu->int_fu.rs2_value;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
 
@@ -941,7 +947,7 @@ APEX_int_fu(APEX_CPU *cpu)
         }
         else if(cpu->int_fu.opcode == OPCODE_SUBL)
         {
-            cpu->int_fu.result_buffer = cpu->phy_regs[cpu->int_fu.renamed_rs1]->reg_value - cpu->rename2_dispatch.imm;
+            cpu->int_fu.result_buffer = cpu->int_fu.rs1_value - cpu->rename2_dispatch.imm;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
 
@@ -1039,7 +1045,7 @@ APEX_mul_fu1(APEX_CPU *cpu)
 
         if(cpu->mul_fu1.opcode == OPCODE_MUL)
         {
-            cpu->mul_fu1.result_buffer = cpu->phy_regs[cpu->mul_fu1.renamed_rs1]->reg_value * cpu->phy_regs[cpu->mul_fu1.renamed_rs2]->reg_value;
+            cpu->mul_fu1.result_buffer = cpu->mul_fu1.rs1_value * cpu->mul_fu1.rs2_value;
             cpu->phy_regs[cpu->mul_fu1.renamed_rd]->reg_value = cpu->mul_fu1.result_buffer;
             cpu->phy_regs[cpu->mul_fu1.renamed_rd]->valid = 0;
 
@@ -1070,7 +1076,7 @@ APEX_mul_fu2(APEX_CPU *cpu)
     {
         if(cpu->mul_fu2.opcode == OPCODE_MUL)
         {
-            cpu->mul_fu2.result_buffer = cpu->phy_regs[cpu->mul_fu2.renamed_rs1]->reg_value * cpu->phy_regs[cpu->mul_fu2.renamed_rs2]->reg_value;
+            cpu->mul_fu2.result_buffer = cpu->mul_fu2.rs1_value * cpu->mul_fu2.rs2_value;
             cpu->phy_regs[cpu->mul_fu2.renamed_rd]->reg_value = cpu->mul_fu2.result_buffer;
             cpu->phy_regs[cpu->mul_fu2.renamed_rd]->valid = 0;
 
@@ -1100,7 +1106,7 @@ APEX_mul_fu3(APEX_CPU *cpu)
     {
         if(cpu->mul_fu3.opcode == OPCODE_MUL)
         {
-            cpu->mul_fu3.result_buffer = cpu->phy_regs[cpu->mul_fu3.renamed_rs1]->reg_value * cpu->phy_regs[cpu->mul_fu3.renamed_rs2]->reg_value;
+            cpu->mul_fu3.result_buffer = cpu->mul_fu3.rs1_value * cpu->mul_fu3.rs2_value;
             cpu->phy_regs[cpu->mul_fu3.renamed_rd]->reg_value = cpu->mul_fu3.result_buffer;
             cpu->phy_regs[cpu->mul_fu3.renamed_rd]->valid = 0;
 
@@ -1131,7 +1137,7 @@ APEX_mul_fu4(APEX_CPU *cpu)
     {
         if(cpu->mul_fu4.opcode == OPCODE_MUL)
         {
-            cpu->mul_fu4.result_buffer = cpu->phy_regs[cpu->mul_fu4.renamed_rs1]->reg_value * cpu->phy_regs[cpu->mul_fu4.renamed_rs2]->reg_value;
+            cpu->mul_fu4.result_buffer = cpu->mul_fu4.rs1_value * cpu->mul_fu4.rs2_value;
             cpu->phy_regs[cpu->mul_fu4.renamed_rd]->reg_value = cpu->mul_fu4.result_buffer;
             cpu->phy_regs[cpu->mul_fu4.renamed_rd]->valid = 1;
 
@@ -1173,7 +1179,7 @@ APEX_lop_fu(APEX_CPU *cpu)
 
         if(cpu->lop_fu.opcode == OPCODE_OR)
         {
-            cpu->lop_fu.result_buffer = cpu->phy_regs[cpu->lop_fu.renamed_rs1]->reg_value | cpu->phy_regs[cpu->lop_fu.renamed_rs2]->reg_value;
+            cpu->lop_fu.result_buffer = cpu->lop_fu.rs1_value | cpu->lop_fu.rs2_value;
             cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = cpu->lop_fu.result_buffer;
             cpu->phy_regs[cpu->lop_fu.renamed_rd]->valid = 1;
 
@@ -1184,7 +1190,7 @@ APEX_lop_fu(APEX_CPU *cpu)
         }
         else if(cpu->lop_fu.opcode == OPCODE_AND)
         {
-            cpu->lop_fu.result_buffer = cpu->phy_regs[cpu->lop_fu.renamed_rs1]->reg_value & cpu->phy_regs[cpu->lop_fu.renamed_rs2]->reg_value;
+            cpu->lop_fu.result_buffer = cpu->lop_fu.rs1_value & cpu->lop_fu.rs2_value;
             cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = cpu->lop_fu.result_buffer;
             cpu->phy_regs[cpu->lop_fu.renamed_rd]->valid = 1;
 
@@ -1195,7 +1201,7 @@ APEX_lop_fu(APEX_CPU *cpu)
         }
         else if(cpu->lop_fu.opcode == OPCODE_XOR)
         {
-            cpu->lop_fu.result_buffer = cpu->phy_regs[cpu->lop_fu.renamed_rs1]->reg_value ^ cpu->phy_regs[cpu->lop_fu.renamed_rs2]->reg_value;
+            cpu->lop_fu.result_buffer = cpu->lop_fu.rs1_value ^ cpu->lop_fu.rs2_value;
             cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = cpu->lop_fu.result_buffer;
             cpu->phy_regs[cpu->lop_fu.renamed_rd]->valid = 1;
 
@@ -1223,14 +1229,15 @@ APEX_dcache(APEX_CPU *cpu)
     {
         if (ENABLE_DEBUG_MESSAGES)
         {
-            print_stage_content("D_Cache --->", &cpu->dcache);
+            print_stage_content("D_Cache-->", &cpu->dcache);
         }
+        cpu->dcache.has_insn = 0;
     }
     else
     {
         if (ENABLE_DEBUG_MESSAGES)
         {
-            print_stage_content("D_Cache --->", NULL);
+            print_stage_content("D_Cache-->", NULL);
         }
     }
 }

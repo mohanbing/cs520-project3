@@ -94,11 +94,16 @@ typedef struct LSQ_Entry
 {
     int lsq_estd;
     int opcode;
+    char opcode_str[10];
     int pc;
     int load_str;
     int mem_addr_valid;
     int mem_addr;
     int imm;
+    int arch_rs1;
+    int arch_rs2;
+    int arch_rs3;
+    int arch_rd;
 
     int rob_idx;
 
