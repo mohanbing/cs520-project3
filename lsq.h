@@ -16,6 +16,7 @@ int add_lsq_entry(APEX_CPU *cpu, CPU_Stage *stage)
     cpu->lsq[cpu->lsq_tail]->lsq_estd = 1;
     cpu->lsq[cpu->lsq_tail]->opcode = stage->opcode;
     cpu->lsq[cpu->lsq_tail]->pc = stage->pc;
+    cpu->lsq[cpu->lsq_tail]->imm = stage->imm;
     
     if(stage->opcode == OPCODE_LDR || stage->opcode == OPCODE_LOAD)
     {
@@ -32,6 +33,9 @@ int add_lsq_entry(APEX_CPU *cpu, CPU_Stage *stage)
     if(stage->renamed_rs1!=-1)
     {
         cpu->lsq[cpu->lsq_tail]->renamed_rs1 = stage->renamed_rs1;
+        cpu->lsq[cpu->lsq_tail]->renamed_rs1_value_valid = cpu->phy_regs[stage->renamed_rs1]->valid;
+        if(cpu->lsq[cpu->lsq_tail]->renamed_rs1_value_valid)
+            cpu->lsq[cpu->lsq_tail]->renamed_rs1_value = cpu->phy_regs[stage->renamed_rs1]->reg_value;
     }
     else
     {
@@ -42,6 +46,9 @@ int add_lsq_entry(APEX_CPU *cpu, CPU_Stage *stage)
     if(stage->renamed_rs2!=-1)
     {
         cpu->lsq[cpu->lsq_tail]->renamed_rs2 = stage->renamed_rs2;
+        cpu->lsq[cpu->lsq_tail]->renamed_rs2_value_valid = cpu->phy_regs[stage->renamed_rs2]->valid;
+        if(cpu->lsq[cpu->lsq_tail]->renamed_rs2_value_valid)
+            cpu->lsq[cpu->lsq_tail]->renamed_rs2_value = cpu->phy_regs[stage->renamed_rs2]->reg_value;
     }
     else
     {
@@ -52,6 +59,9 @@ int add_lsq_entry(APEX_CPU *cpu, CPU_Stage *stage)
     if(stage->renamed_rs3!=-1)
     {
         cpu->lsq[cpu->lsq_tail]->renamed_rs3 = stage->renamed_rs3;
+        cpu->lsq[cpu->lsq_tail]->renamed_rs3_value_valid = cpu->phy_regs[stage->renamed_rs3]->valid;
+        if(cpu->lsq[cpu->lsq_tail]->renamed_rs3_value_valid)
+            cpu->lsq[cpu->lsq_tail]->renamed_rs3_value = cpu->phy_regs[stage->renamed_rs3]->reg_value;
     }
     else
     {
@@ -65,6 +75,42 @@ int add_lsq_entry(APEX_CPU *cpu, CPU_Stage *stage)
     cpu->lsq_tail = cpu->lsq_tail%LSQ_SIZE;
 
     return lsq_idx;
+}
+
+void pickup_forwarded_values_lsq(APEX_CPU *cpu)
+{
+    int i;
+    for(i=0; i<LSQ_SIZE; i++)
+    {
+        if(cpu->lsq[i]!=NULL)
+        {
+            LSQ_Entry *lsq_entry = cpu->lsq[i];
+            if(lsq_entry->lsq_estd)
+            {
+                if(!lsq_entry->renamed_rs1_value_valid)
+                {
+                    if(cpu->forwarding_bus[lsq_entry->renamed_rs1].tag_valid == 1)
+                    {
+                        lsq_entry->renamed_rs1_value_valid = TRUE;
+                    }
+                }
+                if(!lsq_entry->renamed_rs2_value_valid)
+                {
+                    if(cpu->forwarding_bus[lsq_entry->renamed_rs2].tag_valid == 1)
+                    {
+                        lsq_entry->renamed_rs2_value_valid = TRUE;
+                    }
+                }
+                if(!lsq_entry->renamed_rs3_value_valid)
+                {
+                    if(cpu->forwarding_bus[lsq_entry->renamed_rs3].tag_valid == 1)
+                    {
+                        lsq_entry->renamed_rs3_value_valid = TRUE;
+                    }
+                }
+            }
+        }
+    }
 }
 
 void set_rob_idx(APEX_CPU *cpu, int rob_idx, int lsq_idx)

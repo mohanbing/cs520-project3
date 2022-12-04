@@ -14,7 +14,7 @@ int AddRobEntry(APEX_CPU *cpu, CPU_Stage *stage, int lsq_index)
 {
     ROB_ENTRY *rob_entry = (ROB_ENTRY*)malloc(sizeof(ROB_ENTRY));
     rob_entry->pc = stage->pc;
-    rob_entry->architectural_rd = stage->rs1;
+    rob_entry->architectural_rd = stage->rd;
     rob_entry->physical_rd = stage->renamed_rd;
     rob_entry->dcache_bit = 0;
     rob_entry->establised_bit = 1;
@@ -44,15 +44,14 @@ int CommitRobEntry(APEX_CPU *cpu)
         return 0;
     //commit the entry from head to maintain program order
     int opcode = cpu->rob[cpu->rob_head]->instruction_type;
-    int lsq_index = cpu->rob[cpu->rob_head]->lsq_index;
     if
     (  
-        opcode != OPCODE_STORE ||
-        opcode != OPCODE_STR ||
-        opcode != OPCODE_BNZ ||
-        opcode != OPCODE_BZ ||
-        opcode != OPCODE_NOP ||
-        opcode != OPCODE_HALT ||
+        opcode != OPCODE_STORE &&
+        opcode != OPCODE_STR &&
+        opcode != OPCODE_BNZ &&
+        opcode != OPCODE_BZ &&
+        opcode != OPCODE_NOP &&
+        opcode != OPCODE_HALT &&
         opcode != OPCODE_JUMP 
     )
     {
@@ -61,10 +60,11 @@ int CommitRobEntry(APEX_CPU *cpu)
             int arch_regiter_index = cpu->rob[cpu->rob_head]->architectural_rd;
             int arch_register_value = cpu->phy_regs[cpu->rob[cpu->rob_head]->physical_rd]->reg_value;
             cpu->arch_regs[arch_regiter_index] = arch_register_value;        
-            add_phy_reg_free_list(cpu, cpu->rob[cpu->rob_head]->physical_rd);
             DeleteRobEntry(cpu);
         }        
     }
+
+    add_phy_reg_free_list(cpu);
     
     //handle compare to update z flag
     //return 1 
@@ -81,8 +81,9 @@ int CommitRobEntry(APEX_CPU *cpu)
     //handle LOAD/LDR and STORE/STR operations
       //check if LSQ entry is valid from LSQ index and head of LSQ is LOAD/LDR and STORE/STR
       //perform a memory update via D-Cache
+    int lsq_index = cpu->rob[cpu->rob_head]->lsq_index;
     if(
-        cpu->lsq[cpu->lsq_head]!=NULL &&
+        lsq_index!=-1 &&
         cpu->rob[cpu->rob_head]->pc == cpu->lsq[lsq_index]->pc &&
         cpu->lsq[lsq_index]->mem_addr_valid && cpu->lsq[lsq_index]->renamed_rs1_value_valid && 
         cpu->lsq[lsq_index]->renamed_rs2_value_valid && cpu->lsq[lsq_index]->renamed_rs3_value_valid        

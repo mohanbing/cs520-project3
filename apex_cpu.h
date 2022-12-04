@@ -98,6 +98,7 @@ typedef struct LSQ_Entry
     int load_str;
     int mem_addr_valid;
     int mem_addr;
+    int imm;
 
     int rob_idx;
 

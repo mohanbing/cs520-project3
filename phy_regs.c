@@ -4,14 +4,24 @@
 #include "apex_cpu.h"
 
 static void
-add_phy_reg_free_list(APEX_CPU *cpu, int tag)
+add_phy_reg_free_list(APEX_CPU *cpu)
 {
-    if(cpu->phy_regs[tag]->renamed_bit && cpu->phy_regs[tag]->vCount == 0 && cpu->phy_regs[tag]->cCount == 0)
+    int tag;
+    for(tag=0; tag<PHY_REG_FILE_SIZE; tag++)
     {
-        cpu->phy_regs[tag]->valid = FALSE;
-        cpu->free_list[cpu->free_list_tail] = tag;
-        cpu->free_list_tail++;
-        cpu->free_list_tail = cpu->free_list_tail%PHY_REG_FILE_SIZE;
+        if(cpu->phy_regs[tag]->renamed_bit && cpu->phy_regs[tag]->vCount == 0 && cpu->phy_regs[tag]->cCount == 0)
+        {
+            cpu->phy_regs[tag]->reg_flag = -1;
+            cpu->phy_regs[tag]->reg_value = 0;
+            cpu->phy_regs[tag]->reg_tag = tag;
+            cpu->phy_regs[tag]->renamed_bit = 0;
+            cpu->phy_regs[tag]->vCount = 0;
+            cpu->phy_regs[tag]->cCount = 0;
+            cpu->phy_regs[tag]->valid = 0;
+            cpu->free_list[cpu->free_list_tail] = tag;
+            cpu->free_list_tail++;
+            cpu->free_list_tail = cpu->free_list_tail%PHY_REG_FILE_SIZE;
+        }
     }    
 }
 

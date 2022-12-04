@@ -70,6 +70,17 @@ print_free_list(APEX_CPU *cpu)
 }
 
 static void
+print_fwd_bus(APEX_CPU *cpu)
+{
+    printf("================FORWARDING BUS================\n");
+    int i;
+    for(i=0; i<PHY_REG_FILE_SIZE; i++)
+    {
+        printf("IDX: [%d] TAG VALID: [%d] DATA VALUE [%d]\n", i, cpu->forwarding_bus[i].tag_valid, cpu->forwarding_bus[i].data_value);
+    }
+}
+
+static void
 print_issue_q_entries(APEX_CPU *cpu)
 {
     printf("================ISSUE QUEUE================\n");
@@ -91,6 +102,19 @@ print_rob_entries(APEX_CPU *cpu)
     {
         if(cpu->rob[i]!=NULL)
             printf("[ I%d ]", ((cpu->rob[i]->pc-4000)/4)+1);
+    }
+    printf("\n");
+}
+
+static void
+print_lsq_entries(APEX_CPU *cpu)
+{
+    printf("================LSQ================\n");
+    int i;
+    for(i=0; i<LSQ_SIZE; i++)
+    {
+        if(cpu->lsq[i]!=NULL)
+            printf("[ I%d ]", ((cpu->lsq[i]->pc-4000)/4)+1);
     }
     printf("\n");
 }
@@ -1017,7 +1041,7 @@ APEX_mul_fu1(APEX_CPU *cpu)
         {
             cpu->mul_fu1.result_buffer = cpu->phy_regs[cpu->mul_fu1.renamed_rs1]->reg_value * cpu->phy_regs[cpu->mul_fu1.renamed_rs2]->reg_value;
             cpu->phy_regs[cpu->mul_fu1.renamed_rd]->reg_value = cpu->mul_fu1.result_buffer;
-            cpu->phy_regs[cpu->mul_fu1.renamed_rd]->valid = 1;
+            cpu->phy_regs[cpu->mul_fu1.renamed_rd]->valid = 0;
 
             if(cpu->mul_fu1.result_buffer == 0)
                 cpu->phy_regs[cpu->mul_fu1.renamed_rd]->reg_flag = 1;
@@ -1048,7 +1072,7 @@ APEX_mul_fu2(APEX_CPU *cpu)
         {
             cpu->mul_fu2.result_buffer = cpu->phy_regs[cpu->mul_fu2.renamed_rs1]->reg_value * cpu->phy_regs[cpu->mul_fu2.renamed_rs2]->reg_value;
             cpu->phy_regs[cpu->mul_fu2.renamed_rd]->reg_value = cpu->mul_fu2.result_buffer;
-            cpu->phy_regs[cpu->mul_fu2.renamed_rd]->valid = 1;
+            cpu->phy_regs[cpu->mul_fu2.renamed_rd]->valid = 0;
 
             if(cpu->mul_fu2.result_buffer == 0)
                 cpu->phy_regs[cpu->mul_fu2.renamed_rd]->reg_flag = 1;
@@ -1078,7 +1102,7 @@ APEX_mul_fu3(APEX_CPU *cpu)
         {
             cpu->mul_fu3.result_buffer = cpu->phy_regs[cpu->mul_fu3.renamed_rs1]->reg_value * cpu->phy_regs[cpu->mul_fu3.renamed_rs2]->reg_value;
             cpu->phy_regs[cpu->mul_fu3.renamed_rd]->reg_value = cpu->mul_fu3.result_buffer;
-            cpu->phy_regs[cpu->mul_fu3.renamed_rd]->valid = 1;
+            cpu->phy_regs[cpu->mul_fu3.renamed_rd]->valid = 0;
 
             if(cpu->mul_fu3.result_buffer == 0)
                 cpu->phy_regs[cpu->mul_fu3.renamed_rd]->reg_flag = 1;
@@ -1195,6 +1219,20 @@ static void
 APEX_dcache(APEX_CPU *cpu)
 {
     CommitLoadStoreInstr(cpu);
+    if(cpu->dcache.has_insn)
+    {
+        if (ENABLE_DEBUG_MESSAGES)
+        {
+            print_stage_content("D_Cache --->", &cpu->dcache);
+        }
+    }
+    else
+    {
+        if (ENABLE_DEBUG_MESSAGES)
+        {
+            print_stage_content("D_Cache --->", NULL);
+        }
+    }
 }
 
 /*
@@ -1256,7 +1294,7 @@ APEX_cpu_init(const char *filename)
         cpu->free_list[i] = -1;
     }
 
-    for(i=8; i<PHY_REG_FILE_SIZE; i++)
+    for(i=8; i<=PHY_REG_FILE_SIZE; i++)
     {
         cpu->free_list[i-8] = i;
     }
@@ -1277,7 +1315,7 @@ APEX_cpu_init(const char *filename)
     cpu->rob_tail = 0;
     cpu->fwd_req_list_idx = 0;
     cpu->free_list_head = 0;
-    cpu->free_list_tail = 6;
+    cpu->free_list_tail = 7;
 
     /* Parse input file and create code memory */
     cpu->code_memory = create_code_memory(filename, &cpu->code_memory_size);
@@ -1346,6 +1384,8 @@ APEX_cpu_run(APEX_CPU *cpu)
         APEX_lop_fu(cpu);
         
         pickup_forwarded_values(cpu);
+        pickup_forwarded_values_lsq(cpu);
+
         wakeup(cpu);
         selection_logic(cpu);
         process_forwarding_requests(cpu);
@@ -1356,11 +1396,13 @@ APEX_cpu_run(APEX_CPU *cpu)
 
         print_issue_q_entries(cpu);
         print_rob_entries(cpu);
+        print_lsq_entries(cpu);
         print_arch_reg_file(cpu);
         print_phy_reg_file(cpu);
         print_rename_table(cpu);
         print_data_memory(cpu);
         print_free_list(cpu);
+        print_fwd_bus(cpu);
         
 
         if (cpu->single_step)
