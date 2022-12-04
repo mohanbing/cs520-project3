@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "apex_iq.h";
+#include "apex_iq.h"
+#include "forwarding_bus.c"
 
-
-bool is_iq_free(APEX_CPU *cpu)
+static bool is_iq_free(APEX_CPU *cpu)
 {
     if(cpu->iq_head == cpu->iq_tail && cpu->iq[cpu->iq_head]!=NULL)
     {
@@ -13,7 +13,7 @@ bool is_iq_free(APEX_CPU *cpu)
     return TRUE;
 }
 
-int insert_iq_entry(APEX_CPU* cpu, CPU_Stage *stage) //insert in iq
+static int insert_iq_entry(APEX_CPU* cpu, CPU_Stage *stage) //insert in iq
 {
     cpu->iq[cpu->iq_tail] = (IQ_Entry *)malloc(sizeof(IQ_Entry));
     cpu->iq[cpu->iq_tail]->allocated = 1;
@@ -83,7 +83,7 @@ int insert_iq_entry(APEX_CPU* cpu, CPU_Stage *stage) //insert in iq
     if(stage->rd!=-1)
         cpu->iq[cpu->iq_tail]->dst_tag = stage->renamed_rd;
 
-    cpu->iq[cpu->iq_tail]->dispatch = stage;
+    cpu->iq[cpu->iq_tail]->dispatch = *stage;
 
     int tail_idx = cpu->iq_tail;
     cpu->iq_tail++;
@@ -92,6 +92,7 @@ int insert_iq_entry(APEX_CPU* cpu, CPU_Stage *stage) //insert in iq
     return tail_idx;
 }
 
+static
 CPU_Stage* issue_iq(APEX_CPU* cpu, char* fu_type) // 
 {
     // checks whether insn can be issued to the FU
@@ -104,7 +105,7 @@ CPU_Stage* issue_iq(APEX_CPU* cpu, char* fu_type) //
         return NULL;
     }
 
-    if(strcmp(fu_type,"IntFU")==0 || strcmp(fu_type, "LdStr")==0)
+    if(strcmp(fu_type,"IntFU")==0)
     {
         if(cpu->mul_fu1.has_insn==FALSE)
         {
@@ -121,9 +122,10 @@ CPU_Stage* issue_iq(APEX_CPU* cpu, char* fu_type) //
         }
         return NULL;
     }
+    return NULL;
 }
 
-int flush_iq(APEX_CPU* cpu)
+void flush_iq(APEX_CPU* cpu)
 {
     int i;
     for(i=0; i<IQ_SIZE; i++)
@@ -156,73 +158,112 @@ void pickup_forwarded_values(APEX_CPU *cpu)
     int i;
     for(i=0; i<IQ_SIZE; i++)
     {
-        IQ_Entry *iq_entry = cpu->iq;
-        if(iq_entry->allocated)
+        if(cpu->iq[i]!=NULL)
         {
-            if(!iq_entry->src1_valid)
+            IQ_Entry *iq_entry = cpu->iq[i];
+            if(iq_entry->allocated)
             {
-                if(cpu->forwarding_bus[iq_entry->src1_tag].tag_valid == 1)
+                if(!iq_entry->src1_valid)
                 {
-                    iq_entry->src1_valid = TRUE;
+                    if(cpu->forwarding_bus[iq_entry->src1_tag].tag_valid == 1)
+                    {
+                        iq_entry->src1_valid = TRUE;
+                    }
                 }
-            }
-            if(!iq_entry->src2_valid)
-            {
-                if(cpu->forwarding_bus[iq_entry->src2_tag].tag_valid == 1)
+                if(!iq_entry->src2_valid)
                 {
-                    iq_entry->src2_valid = TRUE;
+                    if(cpu->forwarding_bus[iq_entry->src2_tag].tag_valid == 1)
+                    {
+                        iq_entry->src2_valid = TRUE;
+                    }
                 }
-            }
-            if(!iq_entry->src3_valid)
-            {
-                if(cpu->forwarding_bus[iq_entry->src3_tag].tag_valid == 1)
+                if(!iq_entry->src3_valid)
                 {
-                    iq_entry->src3_valid = TRUE;
+                    if(cpu->forwarding_bus[iq_entry->src3_tag].tag_valid == 1)
+                    {
+                        iq_entry->src3_valid = TRUE;
+                    }
                 }
             }
         }
     }
 }
 
-void wakeup(APEX_CPU *cpu)
+static void wakeup(APEX_CPU *cpu)
 {
     int i;
     for(i=0; i<IQ_SIZE; i++)
     {
-        if(cpu->iq[i]->allocated == 1 && cpu->iq[i]->src1_valid == 1 && cpu->iq[i]->src2_valid == 1 && cpu->iq[i]->src3_valid == 1)
+        if(cpu->iq[i]!=NULL)
         {
-            cpu->iq[i]->request_exec = 1;
-        }
-        else
-        {
-            cpu->iq[i]->request_exec = 0;
+            if(cpu->iq[i]->allocated == 1 && cpu->iq[i]->src1_valid == 1 && cpu->iq[i]->src2_valid == 1 && cpu->iq[i]->src3_valid == 1)
+            {
+                cpu->iq[i]->request_exec = 1;
+            }
+            else
+            {
+                cpu->iq[i]->request_exec = 0;
+            }
         }
     }
 }
 
-void selection_logic(APEX_CPU *cpu)
+static void
+decrement_vcount(APEX_CPU *cpu, int renamed_rs1, int renamed_rs2, int renamed_rs3)
 {
-    // if(1) //TODO add selection logic on the basis of availability of FU and corresponding iq entry with request_exec == 1
-    // {
-    //     // set granted field in iq entry as 1 and copy the insn to the allocated FU (call function issue_iq)
-    // }
+    if(renamed_rs1!=-1)
+        cpu->phy_regs[renamed_rs1]->vCount--;
+    
+    if(renamed_rs2!=-1)
+        cpu->phy_regs[renamed_rs2]->vCount--;
+
+    if(renamed_rs3!=-1)
+        cpu->phy_regs[renamed_rs3]->vCount--;
+
+}
+
+static void
+decrement_ccount(APEX_CPU *cpu, int renamed_rd, int opcode)
+{
+    if(opcode == OPCODE_BNZ || opcode == OPCODE_BZ)
+    if(renamed_rd!=-1)
+        cpu->phy_regs[renamed_rd]->cCount--;
+    
+}
+
+static void
+selection_logic(APEX_CPU *cpu)
+{
     int i;
     for(i=0; i<IQ_SIZE; i++)
     {
-        IQ_Entry *iq_entry = cpu->iq[i];
-        if(iq_entry->request_exec)
+        if(cpu->iq[i]!=NULL && cpu->iq[i]->allocated==1)
         {
-            if(issue_iq(cpu, iq_entry->fu_type)!=NULL)
+            IQ_Entry *iq_entry = cpu->iq[i];
+            if(iq_entry->request_exec)
             {
-                iq_entry->granted = TRUE;
-                cpu->mul_fu1 = *(iq_entry->dispatch);
-                cpu->mul_fu1.has_insn = TRUE;
+                CPU_Stage *fu_stage = issue_iq(cpu, iq_entry->fu_type);
+                if(fu_stage!=NULL)
+                {
+                    iq_entry->granted = TRUE;
+                    *fu_stage = iq_entry->dispatch;
+                    (*fu_stage).has_insn = TRUE;
+                    char fu_type[10];
+                    strcpy(fu_type, iq_entry->fu_type);
 
-                // deletes entry from issue queue
-                free(iq_entry);
-                iq_entry = NULL;
-                cpu->iq_head++;
-                cpu->iq_head = cpu->iq_head % IQ_SIZE;
+                    decrement_vcount(cpu, fu_stage->renamed_rs1, fu_stage->renamed_rs2, fu_stage->renamed_rs3);
+                    decrement_ccount(cpu, fu_stage->renamed_rd, fu_stage->opcode);
+
+                    if(fu_stage->rd != -1 && fu_stage->opcode!=OPCODE_MUL)
+                    {
+                        request_forwarding_bus_access(cpu, fu_stage->renamed_rd, fu_type);
+                    }
+                    // deletes entry from issue queue
+                    free(iq_entry);
+                    cpu->iq[i]=NULL;
+                    cpu->iq_head++;
+                    cpu->iq_head = cpu->iq_head % IQ_SIZE;
+                }
             }
         }
     }

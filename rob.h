@@ -1,3 +1,5 @@
+#include "apex_cpu.h"
+
 bool IsRobFree(APEX_CPU *cpu);
 
 int AddRobEntry(APEX_CPU *cpu, CPU_Stage *stage, int lsq_index);

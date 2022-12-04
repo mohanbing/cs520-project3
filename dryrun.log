@@ -1,0 +1,16 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/ivardha1/Architecture3/cs520-project3'
+rm -f *.o *.d *~ apex_sim
+gcc -g -Wall -O0 -DVERSION=2.0 -c -o file_parser.o file_parser.c
+echo "CC file_parser.c"
+gcc -g -Wall -O0 -DVERSION=2.0 -c -o apex_cpu.o apex_cpu.c
+echo "CC apex_cpu.c"
+gcc -g -Wall -O0 -DVERSION=2.0 -c -o rob.o rob.c
+echo "CC rob.c"
+gcc -g -Wall -O0 -DVERSION=2.0 -c -o dcache.o dcache.c
+echo "CC dcache.c"
+gcc -g -Wall -O0 -DVERSION=2.0 -c -o main.o main.c
+echo "CC main.c"
+gcc  -o apex_sim file_parser.o apex_cpu.o rob.o dcache.o main.o 
+make: Leaving directory '/home/ivardha1/Architecture3/cs520-project3'
+ 

@@ -7,6 +7,7 @@
 #define _APEX_CPU_H_
 
 #include <stdbool.h>
+#include <stdlib.h>
 #include "apex_macros.h"
 
 /* Format of an APEX instruction  */
@@ -50,6 +51,9 @@ typedef struct APEX_PHY_REG
     int reg_tag;
     int reg_value;
     int reg_flag;
+    int renamed_bit;
+    int vCount;
+    int cCount;
 } APEX_PHY_REG;
 
 typedef struct IQ_Entry
@@ -79,7 +83,7 @@ typedef struct IQ_Entry
     int lsqindex;
     int robindex;
 
-    CPU_Stage *dispatch;
+    CPU_Stage dispatch;
 
     int request_exec;
     int granted;
@@ -90,10 +94,16 @@ typedef struct LSQ_Entry
 {
     int lsq_estd;
     int opcode;
+    char opcode_str[10];
     int pc;
     int load_str;
     int mem_addr_valid;
     int mem_addr;
+    int imm;
+    int arch_rs1;
+    int arch_rs2;
+    int arch_rs3;
+    int arch_rd;
 
     int rob_idx;
 
@@ -111,6 +121,7 @@ typedef struct LSQ_Entry
 
     int renamed_rd;
     int dest_type;
+    CPU_Stage *disptach;
 }LSQ_Entry;
 
 typedef struct ROB_ENTRY
@@ -123,7 +134,7 @@ typedef struct ROB_ENTRY
     int lsq_index;                  //load store queue index    
     int dcache_bit;                 //dcache accessed bit
     // int overwritten_entry;       //overwritten rename table entry; not needed
-    //int mem_error_code;           //
+    //int mem_error_code;           
 }ROB_ENTRY;
 
 typedef struct FORWARDING_BUS
@@ -131,6 +142,11 @@ typedef struct FORWARDING_BUS
     int tag_valid;
     int data_value;
 }FORWARDING_BUS;
+
+typedef struct DCACHE_ENTRY
+{
+    LSQ_Entry lsq_entry;   
+} DCACHE_ENTRY;
 
 /* Model of APEX CPU */
 typedef struct APEX_CPU
@@ -148,7 +164,7 @@ typedef struct APEX_CPU
 
     int arch_regs[ARCH_REG_FILE_SIZE];       /* Integer register file */
     APEX_PHY_REG *phy_regs[PHY_REG_FILE_SIZE];
-
+    
     int free_list[PHY_REG_FILE_SIZE];
     int rename_table[PHY_REG_FILE_SIZE];
     int free_list_head;
@@ -156,12 +172,13 @@ typedef struct APEX_CPU
     int rename_stall;
 
     FORWARDING_BUS forwarding_bus[PHY_REG_FILE_SIZE];
+    int fwd_bus_req_list[4][10];
+    int fwd_req_list_idx;
 
     //iq
     IQ_Entry *iq[IQ_SIZE];
     int iq_head;
     int iq_tail;
-
     LSQ_Entry *lsq[LSQ_SIZE];
     int lsq_head;
     int lsq_tail;
@@ -170,6 +187,8 @@ typedef struct APEX_CPU
     ROB_ENTRY *rob[ROB_SIZE];
     int rob_head;
     int rob_tail;
+
+    // DCACHE_ENTRY *dcache_entry;
 
     /* Pipeline stages */
     CPU_Stage fetch;
