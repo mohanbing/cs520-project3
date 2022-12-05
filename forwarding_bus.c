@@ -54,7 +54,7 @@ static void
 process_forwarding_requests(APEX_CPU *cpu)
 {
     int i;
-    for(i=0;i<PHY_REG_FILE_SIZE; i++)
+    for(i=0;i<PHY_REG_FILE_SIZE+1; i++)
     {
           if(cpu->forwarding_bus[i].tag_valid==1)
           {
