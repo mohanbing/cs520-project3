@@ -35,7 +35,10 @@ typedef struct CPU_Stage
     int renamed_rs2;
     int renamed_rs3;
     int rd;
+
+    int prev_renamed_rd;
     int renamed_rd;
+    
     int imm;
     int rs1_value;
     int rs2_value;
@@ -129,6 +132,7 @@ typedef struct ROB_ENTRY
     int establised_bit;             //rob entry established bit
     int instruction_type;           //store opcode, can be used during commit
     int pc;                         //program counter
+    int prev_physical_rd;
     int physical_rd;                //physical register destination    
     int architectural_rd;           //destination: architectural register
     int lsq_index;                  //load store queue index    

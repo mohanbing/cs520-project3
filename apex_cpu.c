@@ -400,7 +400,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -421,7 +421,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -442,7 +442,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -469,7 +469,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -534,7 +534,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
             case OPCODE_MOVC:
             {
                 /* MOVC doesn't have register operands */
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -561,7 +561,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -582,7 +582,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -611,7 +611,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -640,7 +640,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -669,7 +669,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -698,7 +698,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -727,7 +727,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -756,7 +756,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }        
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
