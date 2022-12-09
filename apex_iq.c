@@ -3,10 +3,11 @@
 #include <string.h>
 #include "apex_iq.h"
 #include "forwarding_bus.c"
+#include "phy_regs.c"
 
 static bool is_iq_free(APEX_CPU *cpu)
 {
-    if(cpu->iq_head == cpu->iq_tail && cpu->iq[cpu->iq_head]!=NULL)
+    if(cpu->iq_tail == IQ_SIZE)
     {
         return FALSE;
     }
@@ -85,11 +86,7 @@ static int insert_iq_entry(APEX_CPU* cpu, CPU_Stage *stage) //insert in iq
 
     cpu->iq[cpu->iq_tail]->dispatch = *stage;
 
-    int tail_idx = cpu->iq_tail;
-    cpu->iq_tail++;
-    cpu->iq_tail = cpu->iq_tail%IQ_SIZE;
-
-    return tail_idx;
+    return cpu->iq_tail++;
 }
 
 static
@@ -125,22 +122,54 @@ CPU_Stage* issue_iq(APEX_CPU* cpu, char* fu_type) //
     return NULL;
 }
 
-void flush_iq(APEX_CPU* cpu)
+void flush_iq(APEX_CPU* cpu, int pc)
 {
     int i;
+    IQ_Entry *temp_arr[IQ_SIZE];
+    for(i=0; i<IQ_SIZE; i++)
+        temp_arr[i]=NULL;
+
+    int temp_idx=0;
+
     for(i=0; i<IQ_SIZE; i++)
     {
-        free(cpu->iq[i]);
-        cpu->iq[i] = NULL;
+        if(cpu->iq[i]!=NULL)
+        {
+            IQ_Entry *iq_entry = cpu->iq[i];
+            if(cpu->iq[i]->pc >= pc)
+            {
+                decrement_vcount(cpu, iq_entry->src1_tag, iq_entry->src2_tag, iq_entry->src3_tag);
+                decrement_ccount(cpu, iq_entry->dst_tag, iq_entry->opcode);
+
+                free(cpu->iq[i]);
+                cpu->iq[i] = NULL;
+            }
+        }
+    }
+
+    for(i=0; i<IQ_SIZE; i++)
+    {
+        if(cpu->iq[i]!=NULL)
+        {
+            temp_arr[temp_idx] = cpu->iq[i];
+            temp_idx++;
+        }
+    }
+
+    for(i=0; i<IQ_SIZE; i++)
+    {
+        if(temp_arr[i]!=NULL)
+        {
+            cpu->iq[i] = temp_arr[i];
+        }
+        else
+        {
+            cpu->iq[i] = NULL;
+        }
     }
     
     cpu->iq_head = 0;
-    cpu->iq_tail = 0;
-}
-
-void print_iq(APEX_CPU* cpu)
-{
-
+    cpu->iq_tail = temp_idx;
 }
 
 void set_rob_index(APEX_CPU *cpu, int iq_idx, int rob_idx)
@@ -209,29 +238,6 @@ static void wakeup(APEX_CPU *cpu)
 }
 
 static void
-decrement_vcount(APEX_CPU *cpu, int renamed_rs1, int renamed_rs2, int renamed_rs3)
-{
-    if(renamed_rs1!=-1)
-        cpu->phy_regs[renamed_rs1]->vCount--;
-    
-    if(renamed_rs2!=-1)
-        cpu->phy_regs[renamed_rs2]->vCount--;
-
-    if(renamed_rs3!=-1)
-        cpu->phy_regs[renamed_rs3]->vCount--;
-
-}
-
-static void
-decrement_ccount(APEX_CPU *cpu, int renamed_rd, int opcode)
-{
-    if(opcode == OPCODE_BNZ || opcode == OPCODE_BZ)
-    if(renamed_rd!=-1)
-        cpu->phy_regs[renamed_rd]->cCount--;
-    
-}
-
-static void
 selection_logic(APEX_CPU *cpu)
 {
     int i;
@@ -258,11 +264,13 @@ selection_logic(APEX_CPU *cpu)
                     {
                         request_forwarding_bus_access(cpu, fu_stage->renamed_rd, fu_type);
                     }
-                    // deletes entry from issue queue
+                    
+                    // deletes entry from issue queue after swapping
+                    IQ_Entry *temp = cpu->iq[cpu->iq_tail-1];
                     free(iq_entry);
-                    cpu->iq[i]=NULL;
-                    cpu->iq_head++;
-                    cpu->iq_head = cpu->iq_head % IQ_SIZE;
+                    cpu->iq[i]=temp;
+                    cpu->iq_tail--;
+                    cpu->iq[cpu->iq_tail]=NULL;
                 }
             }
         }

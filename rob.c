@@ -8,6 +8,31 @@ bool IsRobFree(APEX_CPU *cpu)
     return cpu->rob[cpu->rob_tail] == NULL;
 }
 
+void flush_rob(APEX_CPU* cpu, int pc)
+{
+    int i=cpu->rob_head;
+    int last_modified_idx = cpu->rob_tail;
+
+    while(i != cpu->rob_tail)
+    {
+        if(cpu->rob[i]!=NULL)
+        {
+            ROB_ENTRY *rob_entry = cpu->rob[i];
+            if(rob_entry->pc >= pc)
+            {
+                free(cpu->rob[i]);
+                cpu->rob[i] = NULL;
+                if(cpu->rob_head == i)
+                    cpu->rob_head = (cpu->rob_head+1)%ROB_SIZE;
+                last_modified_idx = i;
+            }
+        }
+        i = (i+1)%ROB_SIZE;
+    }
+    cpu->rob_tail = last_modified_idx;
+}
+
+
 int AddRobEntry(APEX_CPU *cpu, CPU_Stage *stage, int lsq_index)
 {
     ROB_ENTRY *rob_entry = (ROB_ENTRY*)malloc(sizeof(ROB_ENTRY));

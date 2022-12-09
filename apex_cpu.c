@@ -75,7 +75,7 @@ print_fwd_bus(APEX_CPU *cpu)
 {
     printf("================FORWARDING BUS================\n");
     int i;
-    for(i=0; i<PHY_REG_FILE_SIZE; i++)
+    for(i=0; i<PHY_REG_FILE_SIZE+1; i++)
     {
         printf("IDX: [%d] TAG VALID: [%d] DATA VALUE [%d]\n", i, cpu->forwarding_bus[i].tag_valid, cpu->forwarding_bus[i].data_value);
     }
@@ -243,7 +243,7 @@ print_instruction(const CPU_Stage *stage)
 
         case OPCODE_CMP:
         {
-            printf("%s,R%d,R%d ", stage->opcode_str, stage->rs1,
+            printf("%s,R%d,R%d,R%d ", stage->opcode_str, stage->rd, stage->rs1,
                    stage->rs2);
             break;
         }
@@ -318,9 +318,11 @@ APEX_fetch(APEX_CPU *cpu)
     if (cpu->fetch.has_insn)
     {
         /* This fetches new branch target instruction from next cycle */
-        if (cpu->fetch_from_next_cycle == TRUE)
+        if (cpu->fetch_from_next_cycle == TRUE && cpu->forwarding_bus[PHY_REG_FILE_SIZE].tag_valid)
         {
             cpu->fetch_from_next_cycle = FALSE;
+            cpu->pc = cpu->forwarding_bus[PHY_REG_FILE_SIZE].data_value;
+            cpu->forwarding_bus[PHY_REG_FILE_SIZE].tag_valid = 0;
 
             /* Skip this cycle*/
             return;
@@ -409,7 +411,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -430,7 +432,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -451,7 +453,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -478,7 +480,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -543,7 +545,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
             case OPCODE_MOVC:
             {
                 /* MOVC doesn't have register operands */
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -570,7 +572,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -591,7 +593,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -620,7 +622,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -649,7 +651,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -678,7 +680,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -707,7 +709,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -736,7 +738,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -765,7 +767,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }        
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -784,8 +786,10 @@ APEX_decode_rename1(APEX_CPU *cpu)
                     cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
                     if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
                         cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                    insn_renamed=1;
                 }
+
+                cpu->decode_rename1.renamed_rd=cpu->rename_table[cpu->decode_rename1.rd];
+                insn_renamed=1;
                 break;
             }
 
@@ -797,14 +801,18 @@ APEX_decode_rename1(APEX_CPU *cpu)
 
             case OPCODE_BZ:
             {
+                cpu->decode_rename1.renamed_rs1 = cpu->zero_flag;
                 cpu->phy_regs[cpu->zero_flag]->cCount++;
+                cpu->decode_rename1.renamed_rd=cpu->rename_table[cpu->decode_rename1.rd];
                 insn_renamed=1;
                 break;
             }
 
             case OPCODE_BNZ:
             {
+                cpu->decode_rename1.renamed_rs1 = cpu->zero_flag;
                 cpu->phy_regs[cpu->zero_flag]->cCount++;
+                cpu->decode_rename1.renamed_rd=cpu->rename_table[cpu->decode_rename1.rd];
                 insn_renamed=1;
                 break;
             }
@@ -833,6 +841,70 @@ APEX_decode_rename1(APEX_CPU *cpu)
         if (ENABLE_DEBUG_MESSAGES)
         {
             print_stage_content("Decode/Rename1", NULL);
+        }
+    }
+}
+
+static void
+flush_FU(APEX_CPU *cpu, CPU_Stage *stage, int pc)
+{
+    if(stage == &cpu->decode_rename1)
+    {
+        if(stage->pc >= pc)
+        {
+            cpu->decode_rename1.has_insn = FALSE;
+        }
+    }
+    else if (stage == &cpu->rename2_dispatch)
+    {
+        if(cpu->rename2_dispatch.has_insn && cpu->pc >= pc)
+        {
+            cpu->rename2_dispatch.has_insn = FALSE;
+        }
+    }
+    else if(stage == &cpu->mul_fu1)
+    {
+        if(stage->pc >= pc)
+        {
+            cpu->mul_fu1.has_insn = FALSE;
+        }
+    }
+    else if(stage == &cpu->mul_fu2)
+    {
+        if(stage->pc >= pc)
+        {
+            cpu->mul_fu2.has_insn = FALSE;
+        }
+    }
+    else if(stage == &cpu->mul_fu3)
+    {
+        if(stage->pc >= pc)
+        {
+            cpu->mul_fu3.has_insn = FALSE;
+        }
+    }
+    else if(stage == &cpu->mul_fu4)
+    {
+        if(cpu->mul_fu4.has_insn && stage->pc >= pc)
+        {
+            cpu->forwarding_bus[cpu->mul_fu4.renamed_rd].tag_valid = 0;
+            cpu->mul_fu4.has_insn = FALSE;
+        }
+    }
+    else if(stage == &cpu->dcache)
+    {
+        if(cpu->dcache.has_insn && stage->pc >= pc)
+        {
+            cpu->forwarding_bus[cpu->dcache.renamed_rd].tag_valid = 0;
+            cpu->dcache.has_insn = FALSE;
+        }
+    }
+    else if(stage == &cpu->lop_fu)
+    {
+        if(cpu->lop_fu.has_insn && stage->pc >= pc)
+        {
+            cpu->forwarding_bus[cpu->lop_fu.renamed_rd].tag_valid = 0;
+            cpu->lop_fu.has_insn = FALSE;
         }
     }
 }
@@ -969,49 +1041,63 @@ APEX_int_fu(APEX_CPU *cpu)
         }
         else if(cpu->int_fu.opcode == OPCODE_BZ)
         {
-            if (cpu->phy_regs[cpu->zero_flag]->reg_flag == 1)
+            if (cpu->phy_regs[cpu->zero_flag]->reg_flag == 0)
             {
                 /* Calculate new PC, and send it to fetch unit */
-                // cpu->pc = cpu->int_fu.pc + cpu->int_fu.imm;
+                cpu->int_fu.result_buffer = cpu->int_fu.pc + cpu->int_fu.imm;
                 
                 /* Since we are using reverse callbacks for pipeline stages, 
                     * this will prevent the new instruction from being fetched in the current cycle*/
-                // cpu->fetch_from_next_cycle = TRUE;
+                cpu->fetch_from_next_cycle = TRUE;
 
                 /* Flush previous stages */
-                // if(cpu->decode.has_insn==TRUE)
-                // {
-                //     if(cpu->decode.rd!=-1)
-                //         cpu->regs_valid[cpu->decode.rd]++;
-                // }
-                // cpu->decode.has_insn = FALSE;
+                flush_iq(cpu, cpu->int_fu.pc);
+                flush_lsq(cpu, cpu->int_fu.pc);
+                flush_rob(cpu, cpu->int_fu.pc);
 
+                flush_FU(cpu, &cpu->decode_rename1, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->rename2_dispatch, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu1, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu2, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu3, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu4, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->lop_fu, cpu->int_fu.pc);
+
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
                 /* Make sure fetch stage is enabled to start fetching from new PC */
-                // cpu->fetch.has_insn = TRUE;
+                cpu->fetch.has_insn = TRUE;
             }
         }
 
         else if(cpu->int_fu.opcode == OPCODE_BNZ)
         {
-            if (cpu->phy_regs[cpu->zero_flag]->reg_flag == 0)
+            if (cpu->phy_regs[cpu->zero_flag]->reg_flag == 1)
             {
                 /* Calculate new PC, and send it to fetch unit */
-                // cpu->pc = cpu->int_fu.pc + cpu->int_fu.imm;
+                cpu->int_fu.result_buffer = cpu->int_fu.pc + cpu->int_fu.imm;
                 
                 /* Since we are using reverse callbacks for pipeline stages, 
                     * this will prevent the new instruction from being fetched in the current cycle*/
-                // cpu->fetch_from_next_cycle = TRUE;
+                cpu->fetch_from_next_cycle = TRUE;
 
-                /* Flush previous stages */
-                // if(cpu->decode.has_insn==TRUE)
-                // {
-                //     if(cpu->decode.rd!=-1)
-                //         cpu->regs_valid[cpu->decode.rd]++;
-                // }
-                // cpu->decode.has_insn = FALSE;
+                /* Flush previous stages and IQ, LSQ and ROB */
+                flush_iq(cpu, cpu->int_fu.pc);
+                flush_lsq(cpu, cpu->int_fu.pc);
+                flush_rob(cpu, cpu->int_fu.pc);
 
+                flush_FU(cpu, &cpu->decode_rename1, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->rename2_dispatch, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu1, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu2, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu3, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu4, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->lop_fu, cpu->int_fu.pc);
+                
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
                 /* Make sure fetch stage is enabled to start fetching from new PC */
-                // cpu->fetch.has_insn =  TRUE;
+                cpu->fetch.has_insn = TRUE;
             }
         }
 
@@ -1019,6 +1105,50 @@ APEX_int_fu(APEX_CPU *cpu)
         {
             cpu->int_fu.result_buffer = cpu->int_fu.imm;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
+        }
+
+        else if(cpu->int_fu.opcode == OPCODE_JUMP)
+        {
+            if (TRUE)
+            {
+                /* Calculate new PC, and send it to fetch unit */
+                cpu->int_fu.result_buffer = cpu->int_fu.pc + cpu->int_fu.imm;
+                
+                /* Since we are using reverse callbacks for pipeline stages, 
+                    * this will prevent the new instruction from being fetched in the current cycle*/
+                cpu->fetch_from_next_cycle = TRUE;
+
+                /* Flush previous stages */
+                flush_iq(cpu, cpu->int_fu.pc);
+                flush_lsq(cpu, cpu->int_fu.pc);
+                flush_rob(cpu, cpu->int_fu.pc);
+
+                flush_FU(cpu, &cpu->decode_rename1, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->rename2_dispatch, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu1, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu2, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu3, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu4, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->lop_fu, cpu->int_fu.pc);
+
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+                /* Make sure fetch stage is enabled to start fetching from new PC */
+                cpu->fetch.has_insn = TRUE;
+            }
+        }
+
+        else if(cpu->int_fu.opcode == OPCODE_CMP)
+        {
+            if(cpu->int_fu.rs1_value == cpu->int_fu.rs2_value)
+            {
+                cpu->int_fu.result_buffer = 0;
+            }
+            else
+            {
+                cpu->int_fu.result_buffer = 1;
+            }
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = cpu->int_fu.result_buffer;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
         }
 
@@ -1290,7 +1420,7 @@ APEX_cpu_init(const char *filename)
         }
     }
 
-    for(i=0; i<PHY_REG_FILE_SIZE; i++)
+    for(i=0; i<PHY_REG_FILE_SIZE+1; i++)
     {
         cpu->phy_regs[i] = malloc(sizeof(APEX_PHY_REG));
         cpu->phy_regs[i]->reg_flag = -1;
@@ -1307,12 +1437,12 @@ APEX_cpu_init(const char *filename)
         cpu->arch_regs[i] = 0;
     }
 
-    for(i=8; i<PHY_REG_FILE_SIZE; i++)
+    for(i=7; i<PHY_REG_FILE_SIZE; i++)
     {
         cpu->free_list[i] = -1;
     }
 
-    for(i=8; i<=PHY_REG_FILE_SIZE; i++)
+    for(i=8; i<PHY_REG_FILE_SIZE; i++)
     {
         cpu->free_list[i-8] = i;
     }
@@ -1333,7 +1463,9 @@ APEX_cpu_init(const char *filename)
     cpu->rob_tail = 0;
     cpu->fwd_req_list_idx = 0;
     cpu->free_list_head = 0;
-    cpu->free_list_tail = 7;
+    cpu->free_list_tail = 6;
+
+    cpu->rename_table[ARCH_REG_FILE_SIZE] = cpu->phy_regs[PHY_REG_FILE_SIZE]->reg_tag; // dummy registers for forwarding pc [never updated]
 
     /* Parse input file and create code memory */
     cpu->code_memory = create_code_memory(filename, &cpu->code_memory_size);
