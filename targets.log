@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Fri Dec  9 12:09:55 2022
+# Make data base, printed on Fri Dec  9 18:39:02 2022
 
 # Variables
 
@@ -32,8 +32,6 @@ VSCODE_HANDLES_UNCAUGHT_ERRORS = true
 PWD = /home/ivardha1/Architecture3/BtbBranch
 # automatic
 %D = $(patsubst %/,%,$(dir $%))
-# environment
-OLDPWD = /home/ivardha1/.vscode-server/bin/5235c6bb189b60b01b1f49062f4ffa42384f8c91
 # automatic
 ^D = $(patsubst %/,%,$(dir $^))
 # automatic
@@ -65,7 +63,7 @@ MAKEFILE_LIST := Makefile
 # automatic
 @F = $(notdir $@)
 # environment
-KRB5CCNAME = FILE:/tmp/krb5cc_16001_wuXnouK08x
+KRB5CCNAME = FILE:/tmp/krb5cc_16001_YV22HnR1Zw
 # environment
 XDG_SESSION_TYPE = tty
 # automatic
@@ -99,7 +97,7 @@ MOTD_SHOWN = pam
 # automatic
 ^F = $(notdir $^)
 # environment
-SSH_CLIENT = 149.125.251.207 60561 22
+SSH_CLIENT = 74.74.98.255 63013 22
 # automatic
 ?F = $(notdir $?)
 # automatic
@@ -129,7 +127,7 @@ XDG_RUNTIME_DIR = /run/user/16001
 # makefile (from 'Makefile', line 14)
 CFLAGS = -g -Wall -O0 -DVERSION=$(VERSION)
 # environment
-VSCODE_IPC_HOOK_CLI = /run/user/16001/vscode-ipc-848f42b3-3240-47ee-9111-b6318785875c.sock
+VSCODE_IPC_HOOK_CLI = /run/user/16001/vscode-ipc-a4dde824-b704-479d-affc-76c2141100d3.sock
 # environment
 XDG_SESSION_CLASS = user
 # environment
@@ -139,7 +137,7 @@ HOME = /home/ivardha1
 # environment
 ELECTRON_RUN_AS_NODE = 1
 # environment
-XDG_SESSION_ID = 1018022
+XDG_SESSION_ID = 1020148
 # default
 .RECIPEPREFIX := 
 # automatic
@@ -153,9 +151,9 @@ CC = $(CROSS_PREFIX)gcc
 # makefile (from 'Makefile', line 18)
 PROGS = apex_sim
 # environment
-SSH_CONNECTION = 149.125.251.207 60561 128.226.114.204 22
+SSH_CONNECTION = 74.74.98.255 63013 128.226.114.203 22
 # variable set hash-table stats:
-# Load=72/1024=7%, Rehash=0, Collisions=1/108=1%
+# Load=71/1024=7%, Rehash=0, Collisions=1/107=1%
 
 # Pattern-specific Variable Values
 
@@ -163,9 +161,9 @@ SSH_CONNECTION = 149.125.251.207 60561 128.226.114.204 22
 
 # Directories
 
-# . (device 51, inode 45948918116): 29 files, no impossibilities.
+# . (device 53, inode 45948918116): 34 files, no impossibilities.
 
-# 29 files, no impossibilities in 1 directories.
+# 34 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -184,7 +182,6 @@ apex_sim: file_parser.o apex_cpu.o main.o
 #  recipe to execute (from 'Makefile', line 27):
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
- 
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
@@ -266,12 +263,12 @@ main.o:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 40 / storage = 380 B / avg = 9 B
-# current buf: size = 8162 B / used = 380 B / count = 40 / avg = 9 B
+# strcache buffers: 1 (0) / strings = 42 / storage = 402 B / avg = 9 B
+# current buf: size = 8162 B / used = 402 B / count = 42 / avg = 9 B
 
-# strcache performance: lookups = 52 / hit rate = 23%
+# strcache performance: lookups = 57 / hit rate = 26%
 # hash-table stats:
-# Load=40/8192=0%, Rehash=0, Collisions=0/52=0%
-# Finished Make data base on Fri Dec  9 12:09:55 2022
+# Load=42/8192=1%, Rehash=0, Collisions=0/57=0%
+# Finished Make data base on Fri Dec  9 18:39:02 2022
 
  

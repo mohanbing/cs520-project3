@@ -1041,6 +1041,7 @@ APEX_int_fu(APEX_CPU *cpu)
         }
         else if(cpu->int_fu.opcode == OPCODE_BZ)
         {
+            UpdateBtbEntry(cpu, cpu->int_fu.pc, cpu->int_fu.pc + cpu->int_fu.imm);
             if (cpu->phy_regs[cpu->zero_flag]->reg_flag == 0)
             {
                 /* Calculate new PC, and send it to fetch unit */
@@ -1072,6 +1073,7 @@ APEX_int_fu(APEX_CPU *cpu)
 
         else if(cpu->int_fu.opcode == OPCODE_BNZ)
         {
+            UpdateBtbEntry(cpu, cpu->int_fu.pc, cpu->int_fu.pc + cpu->int_fu.imm);
             if (cpu->phy_regs[cpu->zero_flag]->reg_flag == 1)
             {
                 /* Calculate new PC, and send it to fetch unit */

@@ -137,7 +137,7 @@ typedef struct ROB_ENTRY
     int architectural_rd;           //destination: architectural register
     int lsq_index;                  //load store queue index    
     int dcache_bit;                 //dcache accessed bit
-    // int overwritten_entry;       //overwritten rename table entry; not needed
+    //int overwritten_entry;        //overwritten rename table entry;
     //int mem_error_code;           
 }ROB_ENTRY;
 
