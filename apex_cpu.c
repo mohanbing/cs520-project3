@@ -898,6 +898,34 @@ flush_FU(APEX_CPU *cpu, CPU_Stage *stage, int pc)
     }
 }
 
+static void
+reset_rename_table_free_list(APEX_CPU *cpu, int pc)
+{
+    while(cpu->rob[cpu->rob_tail-1]->pc >= pc)
+    {
+        // remove insn from rob and revert rename table
+        ROB_ENTRY *rob_entry = cpu->rob[cpu->rob_tail-1];
+        cpu->rename_table[rob_entry->architectural_rd] = rob_entry->prev_physical_rd;
+        
+        cpu->phy_regs[rob_entry->physical_rd]->cCount = 0;
+        cpu->phy_regs[rob_entry->physical_rd]->vCount = 0;
+        cpu->phy_regs[rob_entry->physical_rd]->valid = 0;
+        cpu->phy_regs[rob_entry->physical_rd]->reg_flag = -1;
+        cpu->phy_regs[rob_entry->physical_rd]->renamed_bit = 0;
+
+        cpu->free_list[cpu->free_list_tail] = rob_entry->physical_rd;
+        cpu->free_list_tail++;
+        cpu->free_list_tail = cpu->free_list_tail%PHY_REG_FILE_SIZE;
+
+        //add back the removed phy reg back to free list
+        free(rob_entry);
+        cpu->rob[cpu->rob_tail-1] = NULL;
+        cpu->rob_tail--;
+        if(cpu->rob_tail==-1)
+            cpu->rob_tail = PHY_REG_FILE_SIZE-1;
+    }
+}
+
 /*
  * Rename2/Dispatch Stage of APEX Pipeline
  *
