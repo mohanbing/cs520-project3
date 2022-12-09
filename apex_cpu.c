@@ -11,6 +11,7 @@
 #include "rob.c"
 #include "apex_iq.c"
 #include "dcache.c"
+#include "btb.c"
 
 /* Converts the PC(4000 series) into array index for code memory
  *
@@ -326,7 +327,7 @@ APEX_fetch(APEX_CPU *cpu)
         }
 
         /* Store current PC in fetch latch */
-        cpu->fetch.pc = cpu->pc;
+        cpu->fetch.pc = cpu->pc;        
 
         /* Index into code memory using this pc and copy all instruction fields
          * into fetch latch  */
@@ -344,12 +345,22 @@ APEX_fetch(APEX_CPU *cpu)
         cpu->fetch.renamed_rs2 = -1;
         cpu->fetch.renamed_rs3 = -1;
 
+        //probe BTB table to find a branch
+        BTB_ENTRY *probedEntry = ProbeBtb(cpu, cpu->pc);
+
         /* Update PC for next instruction */
-        cpu->pc += 4;
+        if(probedEntry != NULL)
+        {
+            cpu->pc = probedEntry->target_pc;
+        }
+        else
+        {
+            cpu->pc += 4;
+        }        
 
         /* Copy data from fetch latch to decode latch*/
         if(cpu->decode_rename1.has_insn==0)
-            cpu->decode_rename1 = cpu->fetch;
+            cpu->decode_rename1 = cpu->fetch;        
 
         if (ENABLE_DEBUG_MESSAGES)
         {

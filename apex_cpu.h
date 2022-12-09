@@ -148,6 +148,13 @@ typedef struct DCACHE_ENTRY
     LSQ_Entry lsq_entry;   
 } DCACHE_ENTRY;
 
+typedef struct BTB_ENTRY
+{
+    int pc;
+    int target_pc;
+    int prediction;
+} BTB_ENTRY;
+
 /* Model of APEX CPU */
 typedef struct APEX_CPU
 {
@@ -189,6 +196,11 @@ typedef struct APEX_CPU
     int rob_tail;
 
     // DCACHE_ENTRY *dcache_entry;
+
+    //BTB entries
+    BTB_ENTRY *btb[BTB_SIZE];
+    int btb_head;
+    int btb_tail;
 
     /* Pipeline stages */
     CPU_Stage fetch;

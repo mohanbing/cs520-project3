@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Fri Dec  2 17:49:16 2022
+# Make data base, printed on Fri Dec  9 12:09:55 2022
 
 # Variables
 
@@ -29,9 +29,11 @@ VSCODE_HANDLES_UNCAUGHT_ERRORS = true
 # default
 .VARIABLES := 
 # environment
-PWD = /home/ivardha1/Architecture3/cs520-project3
+PWD = /home/ivardha1/Architecture3/BtbBranch
 # automatic
 %D = $(patsubst %/,%,$(dir $%))
+# environment
+OLDPWD = /home/ivardha1/.vscode-server/bin/5235c6bb189b60b01b1f49062f4ffa42384f8c91
 # automatic
 ^D = $(patsubst %/,%,$(dir $^))
 # automatic
@@ -45,7 +47,7 @@ LANG = C
 # makefile
 MAKEFLAGS = pqrR
 # makefile
-CURDIR := /home/ivardha1/Architecture3/cs520-project3
+CURDIR := /home/ivardha1/Architecture3/BtbBranch
 # environment
 APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = 1
 # automatic
@@ -63,7 +65,7 @@ MAKEFILE_LIST := Makefile
 # automatic
 @F = $(notdir $@)
 # environment
-KRB5CCNAME = FILE:/tmp/krb5cc_16001_QbkVFSvPvp
+KRB5CCNAME = FILE:/tmp/krb5cc_16001_wuXnouK08x
 # environment
 XDG_SESSION_TYPE = tty
 # automatic
@@ -89,7 +91,7 @@ MAKELEVEL := 0
 # default
 MAKE = $(MAKE_COMMAND)
 # environment
-PATH = /home/ivardha1/.vscode-server/bin/6261075646f055b99068d3688932416f2346dd3b/bin/remote-cli:/usr/local/bin:/usr/bin:/bin:/usr/games
+PATH = /home/ivardha1/.vscode-server/bin/5235c6bb189b60b01b1f49062f4ffa42384f8c91/bin/remote-cli:/usr/local/bin:/usr/bin:/bin:/usr/games
 # default
 MAKEFILES := 
 # environment
@@ -97,7 +99,7 @@ MOTD_SHOWN = pam
 # automatic
 ^F = $(notdir $^)
 # environment
-SSH_CLIENT = 149.125.134.30 58611 22
+SSH_CLIENT = 149.125.251.207 60561 22
 # automatic
 ?F = $(notdir $?)
 # automatic
@@ -105,11 +107,11 @@ SSH_CLIENT = 149.125.134.30 58611 22
 # 'override' directive
 GNUMAKEFLAGS := 
 # environment
-BROWSER = /home/ivardha1/.vscode-server/bin/6261075646f055b99068d3688932416f2346dd3b/bin/helpers/browser.sh
+BROWSER = /home/ivardha1/.vscode-server/bin/5235c6bb189b60b01b1f49062f4ffa42384f8c91/bin/helpers/browser.sh
 # environment
 LOGNAME = ivardha1
 # makefile (from 'Makefile', line 24)
-APEX_OBJS := file_parser.o apex_cpu.o rob.o dcache.o main.o
+APEX_OBJS := file_parser.o apex_cpu.o main.o
 # makefile
 .DEFAULT_GOAL := all
 # environment
@@ -121,13 +123,13 @@ LDFLAGS =
 # environment
 VSCODE_AGENT_FOLDER = /home/ivardha1/.vscode-server
 # environment
-_ = /home/ivardha1/.vscode-server/bin/6261075646f055b99068d3688932416f2346dd3b/bin/code-server
+_ = /home/ivardha1/.vscode-server/bin/5235c6bb189b60b01b1f49062f4ffa42384f8c91/bin/code-server
 # environment
 XDG_RUNTIME_DIR = /run/user/16001
 # makefile (from 'Makefile', line 14)
 CFLAGS = -g -Wall -O0 -DVERSION=$(VERSION)
 # environment
-VSCODE_IPC_HOOK_CLI = /run/user/16001/vscode-ipc-f43378f3-70eb-4908-af85-d31a74b18836.sock
+VSCODE_IPC_HOOK_CLI = /run/user/16001/vscode-ipc-848f42b3-3240-47ee-9111-b6318785875c.sock
 # environment
 XDG_SESSION_CLASS = user
 # environment
@@ -137,7 +139,7 @@ HOME = /home/ivardha1
 # environment
 ELECTRON_RUN_AS_NODE = 1
 # environment
-XDG_SESSION_ID = 875188
+XDG_SESSION_ID = 1018022
 # default
 .RECIPEPREFIX := 
 # automatic
@@ -151,9 +153,9 @@ CC = $(CROSS_PREFIX)gcc
 # makefile (from 'Makefile', line 18)
 PROGS = apex_sim
 # environment
-SSH_CONNECTION = 149.125.134.30 58611 128.226.114.201 22
+SSH_CONNECTION = 149.125.251.207 60561 128.226.114.204 22
 # variable set hash-table stats:
-# Load=71/1024=7%, Rehash=0, Collisions=1/107=1%
+# Load=72/1024=7%, Rehash=0, Collisions=1/108=1%
 
 # Pattern-specific Variable Values
 
@@ -161,9 +163,9 @@ SSH_CONNECTION = 149.125.134.30 58611 128.226.114.201 22
 
 # Directories
 
-# . (device 53, inode 118688998190): 28 files, no impossibilities.
+# . (device 51, inode 45948918116): 29 files, no impossibilities.
 
-# 28 files, no impossibilities in 1 directories.
+# 29 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -175,23 +177,18 @@ SSH_CONNECTION = 149.125.134.30 58611 128.226.114.201 22
 # 1 implicit rules, 0 (0.0%) terminal.
 # Files
 
-apex_sim: file_parser.o apex_cpu.o rob.o dcache.o main.o
+apex_sim: file_parser.o apex_cpu.o main.o
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
 #  recipe to execute (from 'Makefile', line 27):
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-# Not a target:
-dcache.o:
-#  Implicit rule search has not been done.
-#  Modification time never checked.
-#  File has not been updated.
-
+ 
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-11-25 16:55:45.957042205
+#  Last modified 2022-12-03 22:24:33.646106613
 #  File has been updated.
 #  Successfully updated.
 
@@ -224,12 +221,6 @@ clean:
 
 # Not a target:
 apex_cpu.o:
-#  Implicit rule search has not been done.
-#  Modification time never checked.
-#  File has not been updated.
-
-# Not a target:
-rob.o:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -268,20 +259,19 @@ main.o:
 #  File has not been updated.
 
 # files hash-table stats:
-# Load=11/1024=1%, Rehash=0, Collisions=0/32=0%
+# Load=9/1024=1%, Rehash=0, Collisions=0/28=0%
 # VPATH Search Paths
 
 # No 'vpath' search paths.
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 39 / storage = 367 B / avg = 9 B
-# current buf: size = 8162 B / used = 367 B / count = 39 / avg = 9 B
+# strcache buffers: 1 (0) / strings = 40 / storage = 380 B / avg = 9 B
+# current buf: size = 8162 B / used = 380 B / count = 40 / avg = 9 B
 
-# strcache performance: lookups = 53 / hit rate = 26%
+# strcache performance: lookups = 52 / hit rate = 23%
 # hash-table stats:
- 
-# Load=39/8192=0%, Rehash=0, Collisions=0/53=0%
-# Finished Make data base on Fri Dec  2 17:49:16 2022
+# Load=40/8192=0%, Rehash=0, Collisions=0/52=0%
+# Finished Make data base on Fri Dec  9 12:09:55 2022
 
  

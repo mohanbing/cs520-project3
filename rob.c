@@ -8,8 +8,6 @@ bool IsRobFree(APEX_CPU *cpu)
     return cpu->rob[cpu->rob_tail] == NULL;
 }
 
-
-
 int AddRobEntry(APEX_CPU *cpu, CPU_Stage *stage, int lsq_index)
 {
     ROB_ENTRY *rob_entry = (ROB_ENTRY*)malloc(sizeof(ROB_ENTRY));
@@ -70,10 +68,6 @@ int CommitRobEntry(APEX_CPU *cpu)
     }
 
     add_phy_reg_free_list(cpu);
-    
-    //handle compare to update z flag
-    //return 1 
-
 
     //handle halt
     //return 1 or 0?
@@ -128,5 +122,4 @@ int CommitRobEntry(APEX_CPU *cpu)
 
 void PrintRobContents(APEX_CPU *cpu)
 {
-
 }
