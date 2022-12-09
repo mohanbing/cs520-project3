@@ -137,7 +137,7 @@ typedef struct ROB_ENTRY
     int architectural_rd;           //destination: architectural register
     int lsq_index;                  //load store queue index    
     int dcache_bit;                 //dcache accessed bit
-    // int overwritten_entry;       //overwritten rename table entry; not needed
+    //int overwritten_entry;        //overwritten rename table entry;
     //int mem_error_code;           
 }ROB_ENTRY;
 
@@ -151,6 +151,13 @@ typedef struct DCACHE_ENTRY
 {
     LSQ_Entry lsq_entry;   
 } DCACHE_ENTRY;
+
+typedef struct BTB_ENTRY
+{
+    int pc;
+    int target_pc;
+    int prediction;
+} BTB_ENTRY;
 
 /* Model of APEX CPU */
 typedef struct APEX_CPU
@@ -193,6 +200,11 @@ typedef struct APEX_CPU
     int rob_tail;
 
     // DCACHE_ENTRY *dcache_entry;
+
+    //BTB entries
+    BTB_ENTRY *btb[BTB_SIZE];
+    int btb_head;
+    int btb_tail;
 
     /* Pipeline stages */
     CPU_Stage fetch;

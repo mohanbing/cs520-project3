@@ -43,6 +43,7 @@ int AddRobEntry(APEX_CPU *cpu, CPU_Stage *stage, int lsq_index)
     rob_entry->establised_bit = 1;
     rob_entry->instruction_type = stage->opcode; //store opcode value
     rob_entry->lsq_index = lsq_index;//shouldn't this be lsq tail?
+    rob_entry->prev_physical_rd = stage->prev_renamed_rd;
 
     int rob_idx = cpu->rob_tail;
     //add at the tail and inrement tail
@@ -93,10 +94,6 @@ int CommitRobEntry(APEX_CPU *cpu)
     }
 
     add_phy_reg_free_list(cpu);
-    
-    //handle compare to update z flag
-    //return 1 
-
 
     //handle halt
     //return 1 or 0?
@@ -151,5 +148,4 @@ int CommitRobEntry(APEX_CPU *cpu)
 
 void PrintRobContents(APEX_CPU *cpu)
 {
-
 }
