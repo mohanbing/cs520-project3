@@ -1169,6 +1169,12 @@ APEX_int_fu(APEX_CPU *cpu)
                     flush_FU(cpu, &cpu->mul_fu3, curr_btb->target_pc);
                     flush_FU(cpu, &cpu->mul_fu4, curr_btb->target_pc);
                     flush_FU(cpu, &cpu->lop_fu, curr_btb->target_pc);
+
+                    cpu->fetch_from_next_cycle = TRUE;
+                    cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.pc + 4;
+                    cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
+                    /* Make sure fetch stage is enabled to start fetching from new PC */
+                    cpu->fetch.has_insn = TRUE;
                     
                 }
                 else
@@ -1198,10 +1204,10 @@ APEX_int_fu(APEX_CPU *cpu)
                     * this will prevent the new instruction from being fetched in the current cycle*/
                 cpu->fetch_from_next_cycle = TRUE;
 
+                reset_rename_table_free_list(cpu, cpu->int_fu.pc);
                 /* Flush previous stages */
                 flush_iq(cpu, cpu->int_fu.pc);
                 flush_lsq(cpu, cpu->int_fu.pc);
-                reset_rename_table_free_list(cpu, curr_btb->target_pc);
                 // flush_rob(cpu, cpu->int_fu.pc);
 
                 flush_FU(cpu, &cpu->decode_rename1, cpu->int_fu.pc);
@@ -1266,11 +1272,12 @@ APEX_int_fu(APEX_CPU *cpu)
                 /* Since we are using reverse callbacks for pipeline stages, 
                     * this will prevent the new instruction from being fetched in the current cycle*/
                 cpu->fetch_from_next_cycle = TRUE;
-
+                
+                reset_rename_table_free_list(cpu, cpu->int_fu.pc);
                 /* Flush previous stages */
                 flush_iq(cpu, cpu->int_fu.pc);
                 flush_lsq(cpu, cpu->int_fu.pc);
-                flush_rob(cpu, cpu->int_fu.pc);
+                // flush_rob(cpu, cpu->int_fu.pc);
 
                 flush_FU(cpu, &cpu->decode_rename1, cpu->int_fu.pc);
                 flush_FU(cpu, &cpu->rename2_dispatch, cpu->int_fu.pc);
@@ -1281,6 +1288,7 @@ APEX_int_fu(APEX_CPU *cpu)
                 flush_FU(cpu, &cpu->lop_fu, cpu->int_fu.pc);
 
                 cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
                 /* Make sure fetch stage is enabled to start fetching from new PC */
                 cpu->fetch.has_insn = TRUE;
             }
