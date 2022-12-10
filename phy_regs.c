@@ -41,12 +41,24 @@ rename_table_assign_free_reg(APEX_CPU *cpu, int rd, CPU_Stage *stage)
     }
 
     cpu->rename_stall = 0;
-    cpu->phy_regs[cpu->rename_table[rd]]->renamed_bit = 1;
-    stage->prev_renamed_rd = cpu->rename_table[rd];
-    cpu->rename_table[rd] = cpu->free_list[cpu->free_list_head];
-    cpu->free_list[cpu->free_list_head] = -1;
-    cpu->free_list_head++;
-    cpu->free_list_head = cpu->free_list_head%PHY_REG_FILE_SIZE;
+    if(cpu->rename_table[rd]!=-1)
+    {
+        cpu->phy_regs[cpu->rename_table[rd]]->renamed_bit = 1;
+        stage->prev_renamed_rd = cpu->rename_table[rd];
+        cpu->rename_table[rd] = cpu->free_list[cpu->free_list_head];
+        cpu->free_list[cpu->free_list_head] = -1;
+        cpu->free_list_head++;
+        cpu->free_list_head = cpu->free_list_head%PHY_REG_FILE_SIZE;
+    }
+    else
+    {
+        stage->prev_renamed_rd = -1;
+        cpu->rename_table[rd] = cpu->free_list[cpu->free_list_head];
+        cpu->free_list[cpu->free_list_head] = -1;
+        cpu->free_list_head++;
+        cpu->free_list_head = cpu->free_list_head%PHY_REG_FILE_SIZE;
+    }
+    
 }
 
 static void

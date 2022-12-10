@@ -27,12 +27,12 @@ void DeleteBtbEntry(APEX_CPU *cpu)
     cpu->btb_head = (cpu->btb_head + 1) % BTB_SIZE;
 }
 
-void AddBtbEntry(APEX_CPU *cpu)
+void AddBtbEntry(APEX_CPU *cpu, int pc)
 {
     if(IsBtbFree(cpu))
     {
         BTB_ENTRY *btb_entry = (BTB_ENTRY*)(malloc(sizeof(BTB_ENTRY)));
-        btb_entry->pc = cpu->pc;
+        btb_entry->pc = pc;
         btb_entry->prediction = cpu->decode_rename1.imm < 0 ? TRUE : FALSE;
         btb_entry->target_pc = -1;
 

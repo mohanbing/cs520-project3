@@ -3,6 +3,8 @@
   "C_Cpp.intelliSenseMemoryLimit": 256,
   "terminal.integrated.enablePersistentSessions": false,
   "files.associations": {
-    "stdio.h": "c"
+    "stdio.h": "c",
+    "stdbool.h": "c",
+    "apex_macros.h": "c"
   }
 }
