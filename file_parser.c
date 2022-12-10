@@ -309,25 +309,25 @@ create_APEX_instruction(APEX_Instruction *ins, char *buffer)
 
         case OPCODE_BZ:
         {
-            ins->rd=-1;
-            ins->rs1=-1;
+            ins->rd=ARCH_REG_FILE_SIZE;
+            ins->rs1=ARCH_REG_FILE_SIZE;
             ins->rs2=-1;
             ins->imm = get_num_from_string(tokens[0]);
             break;
         }
         case OPCODE_BNZ:
         {
-            ins->rd=-1;
-            ins->rs1=-1;
+            ins->rd=ARCH_REG_FILE_SIZE;
+            ins->rs1=ARCH_REG_FILE_SIZE;
             ins->rs2=-1;
             ins->imm = get_num_from_string(tokens[0]);
             break;
         }
         case OPCODE_CMP:
         {
-            ins->rs1 = get_num_from_string(tokens[0]);
-            ins->rs2 = get_num_from_string(tokens[1]);
-            ins->rd=-1;
+            ins->rd = get_num_from_string(tokens[0]);
+            ins->rs1 = get_num_from_string(tokens[1]);
+            ins->rs2 = get_num_from_string(tokens[2]);
             break;
         }
         case OPCODE_NOP:
@@ -351,7 +351,7 @@ create_APEX_instruction(APEX_Instruction *ins, char *buffer)
         {
             ins->rs1=get_num_from_string(tokens[0]);
             ins->rs2=-1;
-            ins->rd=-1;
+            ins->rd=ARCH_REG_FILE_SIZE;
             ins->rs3=-1;
             ins->imm = get_num_from_string(tokens[1]);
             break;

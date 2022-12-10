@@ -1,5 +1,6 @@
 #include "apex_cpu.h"
 #include <stdlib.h>
+#include "phy_regs.c"
 
 bool is_lsq_free(APEX_CPU *cpu)
 {
@@ -125,7 +126,28 @@ void delete_lsq_entry(APEX_CPU *cpu)
     cpu->lsq_head=cpu->lsq_head%LSQ_SIZE;
 }
 
-// void move_to_dcache(APEX_CPU *cpu)
-// {
-//     //
-// }
+void flush_lsq(APEX_CPU* cpu, int pc)
+{
+    int i=cpu->lsq_head;
+    int last_modified_idx = cpu->lsq_tail;
+
+    while(i != cpu->lsq_tail)
+    {
+        if(cpu->lsq[i]!=NULL)
+        {
+            LSQ_Entry *lsq_entry = cpu->lsq[i];
+            if(lsq_entry->pc >= pc)
+            {
+                decrement_vcount(cpu, lsq_entry->renamed_rs1, lsq_entry->renamed_rs2, lsq_entry->renamed_rs3);
+
+                free(cpu->lsq[i]);
+                cpu->lsq[i] = NULL;
+                if(cpu->lsq_head == i)
+                    cpu->lsq_head = (cpu->lsq_head+1)%LSQ_SIZE;
+                last_modified_idx = i;
+            }
+        }
+        i = (i+1)%LSQ_SIZE;
+    }
+    cpu->lsq_tail = last_modified_idx;
+}

@@ -35,7 +35,10 @@ typedef struct CPU_Stage
     int renamed_rs2;
     int renamed_rs3;
     int rd;
+
+    int prev_renamed_rd;
     int renamed_rd;
+    
     int imm;
     int rs1_value;
     int rs2_value;
@@ -129,11 +132,12 @@ typedef struct ROB_ENTRY
     int establised_bit;             //rob entry established bit
     int instruction_type;           //store opcode, can be used during commit
     int pc;                         //program counter
+    int prev_physical_rd;
     int physical_rd;                //physical register destination    
     int architectural_rd;           //destination: architectural register
     int lsq_index;                  //load store queue index    
     int dcache_bit;                 //dcache accessed bit
-    // int overwritten_entry;       //overwritten rename table entry; not needed
+    //int overwritten_entry;        //overwritten rename table entry;
     //int mem_error_code;           
 }ROB_ENTRY;
 
@@ -148,6 +152,13 @@ typedef struct DCACHE_ENTRY
     LSQ_Entry lsq_entry;   
 } DCACHE_ENTRY;
 
+typedef struct BTB_ENTRY
+{
+    int pc;
+    int target_pc;
+    int prediction;
+} BTB_ENTRY;
+
 /* Model of APEX CPU */
 typedef struct APEX_CPU
 {
@@ -159,19 +170,19 @@ typedef struct APEX_CPU
     APEX_Instruction *code_memory; /* Code Memory */
     int data_memory[DATA_MEMORY_SIZE]; /* Data Memory */
     int single_step;               /* Wait for user input after every cycle */
-    int zero_flag;                 /* {TRUE, FALSE} Used by BZ and BNZ to branch */
+    int zero_flag;                 /* Maps the physical register mapped to the cc flag [Used by BZ and BNZ to branch] */
     int fetch_from_next_cycle;
 
-    int arch_regs[ARCH_REG_FILE_SIZE];       /* Integer register file */
-    APEX_PHY_REG *phy_regs[PHY_REG_FILE_SIZE];
+    int arch_regs[ARCH_REG_FILE_SIZE+1];       /* Arch register file + 1(for dummy register that forwards pc) */
+    APEX_PHY_REG *phy_regs[PHY_REG_FILE_SIZE+1];
     
     int free_list[PHY_REG_FILE_SIZE];
-    int rename_table[PHY_REG_FILE_SIZE];
+    int rename_table[ARCH_REG_FILE_SIZE+1];
     int free_list_head;
     int free_list_tail;
     int rename_stall;
 
-    FORWARDING_BUS forwarding_bus[PHY_REG_FILE_SIZE];
+    FORWARDING_BUS forwarding_bus[PHY_REG_FILE_SIZE+1];
     int fwd_bus_req_list[4][10];
     int fwd_req_list_idx;
 
@@ -189,6 +200,11 @@ typedef struct APEX_CPU
     int rob_tail;
 
     // DCACHE_ENTRY *dcache_entry;
+
+    //BTB entries
+    BTB_ENTRY *btb[BTB_SIZE];
+    int btb_head;
+    int btb_tail;
 
     /* Pipeline stages */
     CPU_Stage fetch;
@@ -209,6 +225,6 @@ typedef struct APEX_CPU
 
 APEX_Instruction *create_code_memory(const char *filename, int *size);
 APEX_CPU *APEX_cpu_init(const char *filename);
-void APEX_cpu_run(APEX_CPU *cpu);
+void APEX_cpu_run(APEX_CPU *cpu, int mode, int cycles);
 void APEX_cpu_stop(APEX_CPU *cpu);
 #endif

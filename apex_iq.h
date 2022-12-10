@@ -10,7 +10,7 @@ void set_lsq_index(APEX_CPU *cpu, int iq_idx, int lsq_idx);
 
 static CPU_Stage* issue_iq(APEX_CPU* cpu,char* fu_type);
 
-void flush_iq(APEX_CPU* cpu);
+void flush_iq(APEX_CPU* cpu, int pc);
 
 void print_iq(APEX_CPU* cpu);
 

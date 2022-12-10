@@ -11,6 +11,7 @@
 #include "rob.c"
 #include "apex_iq.c"
 #include "dcache.c"
+#include "btb.c"
 
 /* Converts the PC(4000 series) into array index for code memory
  *
@@ -21,6 +22,12 @@ get_code_memory_index_from_pc(const int pc)
 {
     return (pc - 4000) / 4;
 }
+
+static void
+flush_FU(APEX_CPU *cpu, CPU_Stage *stage, int pc);
+
+static void
+reset_rename_table_free_list(APEX_CPU* cpu, int pc);
 
 static void
 print_data_memory(APEX_CPU *cpu)
@@ -34,51 +41,51 @@ print_data_memory(APEX_CPU *cpu)
     }
 }
 
-static void
-print_rename_table(APEX_CPU *cpu)
-{
-    printf("================RENAME TABLE================\n");
-    int i;
-    for(i=0; i<ARCH_REG_FILE_SIZE; i++)
-    {
-        printf("| \t ARCH REG [%d] \t | \t PHY REG = %d \t |\n", i, cpu->rename_table[i]);
-    }
-}
+// static void
+// print_rename_table(APEX_CPU *cpu)
+// {
+//     printf("================RENAME TABLE================\n");
+//     int i;
+//     for(i=0; i<ARCH_REG_FILE_SIZE; i++)
+//     {
+//         printf("| \t ARCH REG [%d] \t | \t PHY REG = %d \t |\n", i, cpu->rename_table[i]);
+//     }
+// }
 
-static void
-print_free_list(APEX_CPU *cpu)
-{
-    printf("================FREE LIST================\n");
-    int i;
-    for(i=0; i<PHY_REG_FILE_SIZE; i++)
-    {
-        if(i==cpu->free_list_head && cpu->free_list_head == cpu->free_list_tail)
-        {
-            printf("HEAD TAIL---> %d\n", cpu->free_list[i]);
-        }
-        else if(i==cpu->free_list_head)
-        {
-            printf("HEAD ---> %d\n", cpu->free_list[i]);
-        }
-        else if(i==cpu->free_list_tail)
-        {
-            printf("TAIL ---> %d\n", cpu->free_list[i]);
-        }
-        else
-            printf("%d\n", cpu->free_list[i]);
-    }
-}
+// static void
+// print_free_list(APEX_CPU *cpu)
+// {
+//     printf("================FREE LIST================\n");
+//     int i;
+//     for(i=0; i<PHY_REG_FILE_SIZE; i++)
+//     {
+//         if(i==cpu->free_list_head && cpu->free_list_head == cpu->free_list_tail)
+//         {
+//             printf("HEAD TAIL---> %d\n", cpu->free_list[i]);
+//         }
+//         else if(i==cpu->free_list_head)
+//         {
+//             printf("HEAD ---> %d\n", cpu->free_list[i]);
+//         }
+//         else if(i==cpu->free_list_tail)
+//         {
+//             printf("TAIL ---> %d\n", cpu->free_list[i]);
+//         }
+//         else
+//             printf("%d\n", cpu->free_list[i]);
+//     }
+// }
 
-static void
-print_fwd_bus(APEX_CPU *cpu)
-{
-    printf("================FORWARDING BUS================\n");
-    int i;
-    for(i=0; i<PHY_REG_FILE_SIZE; i++)
-    {
-        printf("IDX: [%d] TAG VALID: [%d] DATA VALUE [%d]\n", i, cpu->forwarding_bus[i].tag_valid, cpu->forwarding_bus[i].data_value);
-    }
-}
+// static void
+// print_fwd_bus(APEX_CPU *cpu)
+// {
+//     printf("================FORWARDING BUS================\n");
+//     int i;
+//     for(i=0; i<PHY_REG_FILE_SIZE+1; i++)
+//     {
+//         printf("IDX: [%d] TAG VALID: [%d] DATA VALUE [%d]\n", i, cpu->forwarding_bus[i].tag_valid, cpu->forwarding_bus[i].data_value);
+//     }
+// }
 
 static void
 print_issue_q_entries(APEX_CPU *cpu)
@@ -88,7 +95,17 @@ print_issue_q_entries(APEX_CPU *cpu)
     for(i=0; i<IQ_SIZE; i++)
     {
         if(cpu->iq[i]!=NULL)
-            printf("[ I%d ]", ((cpu->iq[i]->pc-4000)/4)+1);
+        {
+            if(cpu->iq_head == cpu->iq_tail)
+                printf("HEAD & TAIL --> [ I%d ]", ((cpu->iq[i]->pc-4000)/4));
+            else if(cpu->iq_head)
+                printf("HEAD --> [ I%d ]", ((cpu->iq[i]->pc-4000)/4));
+            else if(cpu->iq_tail)
+                printf("TAIL --> [ I%d ]", ((cpu->iq[i]->pc-4000)/4));
+            else
+                printf("[ I%d ]", ((cpu->iq[i]->pc-4000)/4));
+        }
+            
     }
     printf("\n");
 }
@@ -101,7 +118,16 @@ print_rob_entries(APEX_CPU *cpu)
     for(i=0; i<ROB_SIZE; i++)
     {
         if(cpu->rob[i]!=NULL)
-            printf("[ I%d ]", ((cpu->rob[i]->pc-4000)/4)+1);
+        {
+            if(cpu->rob_head == cpu->rob_tail)
+                printf("HEAD & TAIL --> [ I%d ]", ((cpu->rob[i]->pc-4000)/4));
+            else if(cpu->rob_head)
+                printf("HEAD --> [ I%d ]", ((cpu->rob[i]->pc-4000)/4));
+            else if(cpu->rob_tail)
+                printf("TAIL --> [ I%d ]", ((cpu->rob[i]->pc-4000)/4));
+            else
+                printf("[ I%d ]", ((cpu->rob[i]->pc-4000)/4));
+        }
     }
     printf("\n");
 }
@@ -114,9 +140,33 @@ print_lsq_entries(APEX_CPU *cpu)
     for(i=0; i<LSQ_SIZE; i++)
     {
         if(cpu->lsq[i]!=NULL)
-            printf("[ I%d ]", ((cpu->lsq[i]->pc-4000)/4)+1);
+        {
+            if(cpu->lsq_head == cpu->lsq_tail)
+                printf("HEAD & TAIL --> [ I%d ]", ((cpu->lsq[i]->pc-4000)/4));
+            else if(cpu->rob_head)
+                printf("HEAD --> [ I%d ]", ((cpu->lsq[i]->pc-4000)/4));
+            else if(cpu->rob_tail)
+                printf("TAIL --> [ I%d ]", ((cpu->lsq[i]->pc-4000)/4));
+            else
+                printf("[ I%d ]", ((cpu->lsq[i]->pc-4000)/4));
+        }
     }
     printf("\n");
+}
+
+static void
+print_btb_entries(APEX_CPU *cpu)
+{
+    printf("================BTB Cache================\n");
+    int i;
+    for(i=0; i<BTB_SIZE; i++)
+    {
+        if(cpu->btb[i]!=NULL)
+        {
+            printf("Prediction : %d | Target Addr : %d | I%d (%d)", cpu->btb[i]->prediction, cpu->btb[i]->target_pc, (cpu->btb[i]->pc-4000)/4, cpu->btb[i]->pc);
+            printf("==================================\n");
+        }
+    }
 }
 
 static void
@@ -242,7 +292,7 @@ print_instruction(const CPU_Stage *stage)
 
         case OPCODE_CMP:
         {
-            printf("%s,R%d,R%d ", stage->opcode_str, stage->rs1,
+            printf("%s,R%d,R%d,R%d ", stage->opcode_str, stage->rd, stage->rs1,
                    stage->rs2);
             break;
         }
@@ -265,7 +315,7 @@ print_stage_content(const char *name, const CPU_Stage *stage)
 {
     if(stage!=NULL)
     {
-        printf("%-15s: I%d: (%d) ", name, ((stage->pc-4000)/4)+1,stage->pc);
+        printf("%-15s: I%d: (%d) ", name, ((stage->pc-4000)/4),stage->pc);
         print_instruction(stage);
     }
     else
@@ -291,18 +341,18 @@ print_arch_reg_file(const APEX_CPU *cpu)
     }
 }
 
-static void
-print_phy_reg_file(const APEX_CPU *cpu)
-{
-    printf("----------\n%s\n----------\n", "State of Physical Register File");
-    int i;
-    for (i = 0; i < PHY_REG_FILE_SIZE ; ++i)
-    {
-        printf("P%-3d\tValue:[%-3d] \t Flag: [%d] \t Valid: [%d]", i, cpu->phy_regs[i]->reg_value, cpu->phy_regs[i]->reg_flag, 
-                    cpu->phy_regs[i]->valid);
-        printf("\n");
-    }
-}
+// static void
+// print_phy_reg_file(const APEX_CPU *cpu)
+// {
+//     printf("----------\n%s\n----------\n", "State of Physical Register File");
+//     int i;
+//     for (i = 0; i < PHY_REG_FILE_SIZE ; ++i)
+//     {
+//         printf("P%-3d\tValue:[%-3d] \t Flag: [%d] \t Valid: [%d]", i, cpu->phy_regs[i]->reg_value, cpu->phy_regs[i]->reg_flag, 
+//                     cpu->phy_regs[i]->valid);
+//         printf("\n");
+//     }
+// }
 
 /*
  * Fetch Stage of APEX Pipeline
@@ -317,16 +367,18 @@ APEX_fetch(APEX_CPU *cpu)
     if (cpu->fetch.has_insn)
     {
         /* This fetches new branch target instruction from next cycle */
-        if (cpu->fetch_from_next_cycle == TRUE)
+        if (cpu->fetch_from_next_cycle == TRUE && cpu->forwarding_bus[PHY_REG_FILE_SIZE].tag_valid)
         {
             cpu->fetch_from_next_cycle = FALSE;
+            cpu->pc = cpu->forwarding_bus[PHY_REG_FILE_SIZE].data_value;
+            cpu->forwarding_bus[PHY_REG_FILE_SIZE].tag_valid = 0;
 
             /* Skip this cycle*/
             return;
         }
 
         /* Store current PC in fetch latch */
-        cpu->fetch.pc = cpu->pc;
+        cpu->fetch.pc = cpu->pc;        
 
         /* Index into code memory using this pc and copy all instruction fields
          * into fetch latch  */
@@ -340,16 +392,27 @@ APEX_fetch(APEX_CPU *cpu)
         cpu->fetch.imm = current_ins->imm;
 
         cpu->fetch.renamed_rd = -1;
+
         cpu->fetch.renamed_rs1 = -1;
         cpu->fetch.renamed_rs2 = -1;
         cpu->fetch.renamed_rs3 = -1;
 
+        //probe BTB table to find a branch
+        BTB_ENTRY *probedEntry = ProbeBtb(cpu, cpu->pc);
+
         /* Update PC for next instruction */
-        cpu->pc += 4;
+        if(probedEntry != NULL && probedEntry->prediction)
+        {
+            cpu->pc = probedEntry->target_pc;
+        }
+        else
+        {
+            cpu->pc += 4;
+        }        
 
         /* Copy data from fetch latch to decode latch*/
         if(cpu->decode_rename1.has_insn==0)
-            cpu->decode_rename1 = cpu->fetch;
+            cpu->decode_rename1 = cpu->fetch;        
 
         if (ENABLE_DEBUG_MESSAGES)
         {
@@ -361,6 +424,10 @@ APEX_fetch(APEX_CPU *cpu)
         {
             cpu->fetch.has_insn = FALSE;
         }
+    }
+    else
+    {
+        print_stage_content("Fetch", NULL);
     }
 }
 
@@ -398,7 +465,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -419,7 +486,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -440,7 +507,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -467,7 +534,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -532,7 +599,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
             case OPCODE_MOVC:
             {
                 /* MOVC doesn't have register operands */
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -559,7 +626,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -580,7 +647,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -609,7 +676,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -638,7 +705,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -667,7 +734,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -696,7 +763,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -725,7 +792,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -754,7 +821,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs2_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs2]->reg_value;
                 }        
                 
-                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd);
+                rename_table_assign_free_reg(cpu, cpu->decode_rename1.rd, &cpu->decode_rename1);
                 if(cpu->rename_stall==0)
                 {
                     cpu->decode_rename1.renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
@@ -773,8 +840,10 @@ APEX_decode_rename1(APEX_CPU *cpu)
                     cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->vCount++;
                     if(cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->valid == 1)
                         cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
-                    insn_renamed=1;
                 }
+
+                cpu->decode_rename1.renamed_rd=cpu->rename_table[cpu->decode_rename1.rd];
+                insn_renamed=1;
                 break;
             }
 
@@ -786,15 +855,25 @@ APEX_decode_rename1(APEX_CPU *cpu)
 
             case OPCODE_BZ:
             {
+                cpu->decode_rename1.renamed_rs1 = cpu->zero_flag;
                 cpu->phy_regs[cpu->zero_flag]->cCount++;
+                cpu->decode_rename1.prev_renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                cpu->decode_rename1.renamed_rd=cpu->rename_table[cpu->decode_rename1.rd];
                 insn_renamed=1;
+
+                AddBtbEntry(cpu, cpu->decode_rename1.pc);
                 break;
             }
 
             case OPCODE_BNZ:
             {
+                cpu->decode_rename1.renamed_rs1 = cpu->zero_flag;
                 cpu->phy_regs[cpu->zero_flag]->cCount++;
+                cpu->decode_rename1.prev_renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
+                cpu->decode_rename1.renamed_rd=cpu->rename_table[cpu->decode_rename1.rd];
                 insn_renamed=1;
+
+                AddBtbEntry(cpu, cpu->decode_rename1.pc);
                 break;
             }
 
@@ -823,6 +902,125 @@ APEX_decode_rename1(APEX_CPU *cpu)
         {
             print_stage_content("Decode/Rename1", NULL);
         }
+    }
+}
+
+static void
+flush_FU(APEX_CPU *cpu, CPU_Stage *stage, int pc)
+{
+    if(stage == &cpu->decode_rename1)
+    {
+        if(stage->pc > pc)
+        {
+            cpu->decode_rename1.has_insn = FALSE;
+        }
+    }
+    else if (stage == &cpu->rename2_dispatch)
+    {
+        if(cpu->rename2_dispatch.has_insn && cpu->pc >= pc)
+        {
+            if(cpu->rename2_dispatch.rd!=-1)
+            {
+                cpu->rename_table[cpu->rename2_dispatch.rd] = cpu->rename2_dispatch.prev_renamed_rd;
+        
+                cpu->phy_regs[cpu->rename2_dispatch.rd]->cCount = 0;
+                cpu->phy_regs[cpu->rename2_dispatch.rd]->vCount = 0;
+                cpu->phy_regs[cpu->rename2_dispatch.rd]->valid = 0;
+                cpu->phy_regs[cpu->rename2_dispatch.rd]->reg_flag = -1;
+                cpu->phy_regs[cpu->rename2_dispatch.rd]->renamed_bit = 0;
+                
+                //add back the removed phy reg back to free list
+                cpu->free_list[cpu->free_list_tail] = cpu->rename2_dispatch.renamed_rd;
+                cpu->free_list_tail++;
+                cpu->free_list_tail = cpu->free_list_tail%PHY_REG_FILE_SIZE;
+            }
+            cpu->rename2_dispatch.has_insn = FALSE;
+        }
+    }
+    else if(stage == &cpu->mul_fu1)
+    {
+        if(stage->pc >= pc)
+        {
+            cpu->mul_fu1.has_insn = FALSE;
+        }
+    }
+    else if(stage == &cpu->mul_fu2)
+    {
+        if(stage->pc >= pc)
+        {
+            cpu->mul_fu2.has_insn = FALSE;
+        }
+    }
+    else if(stage == &cpu->mul_fu3)
+    {
+        if(stage->pc >= pc)
+        {
+            cpu->mul_fu3.has_insn = FALSE;
+        }
+    }
+    else if(stage == &cpu->mul_fu4)
+    {
+        if(cpu->mul_fu4.has_insn && stage->pc >= pc)
+        {
+            cpu->forwarding_bus[cpu->mul_fu4.renamed_rd].tag_valid = 0;
+            cpu->mul_fu4.has_insn = FALSE;
+        }
+    }
+    else if(stage == &cpu->dcache)
+    {
+        if(cpu->dcache.has_insn && stage->pc >= pc)
+        {
+            cpu->forwarding_bus[cpu->dcache.renamed_rd].tag_valid = 0;
+            cpu->dcache.has_insn = FALSE;
+        }
+    }
+    else if(stage == &cpu->lop_fu)
+    {
+        if(cpu->lop_fu.has_insn && stage->pc >= pc)
+        {
+            cpu->forwarding_bus[cpu->lop_fu.renamed_rd].tag_valid = 0;
+            cpu->lop_fu.has_insn = FALSE;
+        }
+    }
+}
+
+static void
+reset_rename_table_free_list(APEX_CPU *cpu, int pc)
+{
+    int tail = cpu->rob_tail-1;
+    if(tail==-1)
+        tail = ROB_SIZE-1;
+
+    while(cpu->rob[tail]!=NULL && cpu->rob[tail]->pc >= pc)
+    {
+        // remove insn from rob and revert rename table
+        ROB_ENTRY *rob_entry = cpu->rob[tail];
+        
+        if(rob_entry->architectural_rd!=-1)
+        {
+            cpu->rename_table[rob_entry->architectural_rd] = rob_entry->prev_physical_rd;
+        
+            cpu->phy_regs[rob_entry->physical_rd]->cCount = 0;
+            cpu->phy_regs[rob_entry->physical_rd]->vCount = 0;
+            cpu->phy_regs[rob_entry->physical_rd]->valid = 0;
+            cpu->phy_regs[rob_entry->physical_rd]->reg_flag = -1;
+            cpu->phy_regs[rob_entry->physical_rd]->renamed_bit = 0;
+            
+            //add back the removed phy reg back to free list
+            if(rob_entry->physical_rd < PHY_REG_FILE_SIZE)  // does not add the dummy phy regs
+            {
+                            cpu->free_list[cpu->free_list_tail] = rob_entry->physical_rd;
+            cpu->free_list_tail++;
+            cpu->free_list_tail = cpu->free_list_tail%PHY_REG_FILE_SIZE;
+            }
+        }
+        free(rob_entry);
+        cpu->rob[tail] = NULL;
+        cpu->rob_tail = tail;
+
+        tail--;
+        if(tail==-1)
+            tail = ROB_SIZE-1;
     }
 }
 
@@ -871,8 +1069,8 @@ APEX_rename2_dispatch(APEX_CPU *cpu)
         {
             if(is_iq_free(cpu) && IsRobFree(cpu))
             {
-                int issue_q_idx = insert_iq_entry(cpu, &cpu->rename2_dispatch);
-                int rob_idx = AddRobEntry(cpu, &cpu->rename2_dispatch, -1);
+                insert_iq_entry(cpu, &cpu->rename2_dispatch);
+                AddRobEntry(cpu, &cpu->rename2_dispatch, -1);
                 cpu->rename2_dispatch.has_insn = FALSE;
             }
         }
@@ -925,7 +1123,7 @@ APEX_int_fu(APEX_CPU *cpu)
         }
         else if(cpu->int_fu.opcode == OPCODE_ADDL)
         {
-            cpu->int_fu.result_buffer = cpu->int_fu.rs1_value + cpu->rename2_dispatch.imm;
+            cpu->int_fu.result_buffer = cpu->int_fu.rs1_value + cpu->int_fu.imm;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
 
@@ -947,7 +1145,7 @@ APEX_int_fu(APEX_CPU *cpu)
         }
         else if(cpu->int_fu.opcode == OPCODE_SUBL)
         {
-            cpu->int_fu.result_buffer = cpu->int_fu.rs1_value - cpu->rename2_dispatch.imm;
+            cpu->int_fu.result_buffer = cpu->int_fu.rs1_value - cpu->int_fu.imm;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
 
@@ -958,49 +1156,148 @@ APEX_int_fu(APEX_CPU *cpu)
         }
         else if(cpu->int_fu.opcode == OPCODE_BZ)
         {
-            if (cpu->phy_regs[cpu->zero_flag]->reg_flag == 1)
+            BTB_ENTRY *curr_btb = ProbeBtb(cpu, cpu->int_fu.pc);
+                
+            int branch_taken=0;
+            if (cpu->phy_regs[cpu->int_fu.renamed_rs1]->reg_flag == 0)
             {
                 /* Calculate new PC, and send it to fetch unit */
-                // cpu->pc = cpu->int_fu.pc + cpu->int_fu.imm;
+                cpu->int_fu.result_buffer = cpu->int_fu.pc + cpu->int_fu.imm;
+                branch_taken=1;
+                if(branch_taken == curr_btb->prediction && curr_btb->target_pc>=0)
+                {
+                    print_stage_content("INT FU -->", &cpu->int_fu);
+                    cpu->int_fu.has_insn = FALSE;
+                    return;
+                }
                 
                 /* Since we are using reverse callbacks for pipeline stages, 
                     * this will prevent the new instruction from being fetched in the current cycle*/
-                // cpu->fetch_from_next_cycle = TRUE;
+                cpu->fetch_from_next_cycle = TRUE;
+
+                reset_rename_table_free_list(cpu, cpu->int_fu.pc);
 
                 /* Flush previous stages */
-                // if(cpu->decode.has_insn==TRUE)
-                // {
-                //     if(cpu->decode.rd!=-1)
-                //         cpu->regs_valid[cpu->decode.rd]++;
-                // }
-                // cpu->decode.has_insn = FALSE;
+                flush_iq(cpu, cpu->int_fu.pc);
+                flush_lsq(cpu, cpu->int_fu.pc);
+                // flush_rob(cpu, cpu->int_fu.pc);
 
+                flush_FU(cpu, &cpu->decode_rename1, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->rename2_dispatch, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu1, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu2, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu3, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu4, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->lop_fu, cpu->int_fu.pc);
+
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
                 /* Make sure fetch stage is enabled to start fetching from new PC */
-                // cpu->fetch.has_insn = TRUE;
+                cpu->fetch.has_insn = TRUE;
             }
+
+            if(curr_btb->target_pc==-1)
+                UpdateBtbEntry(cpu, cpu->int_fu.pc, cpu->int_fu.pc + cpu->int_fu.imm);
+            
+            else if(branch_taken!=curr_btb->prediction && curr_btb->target_pc>=0)
+            {
+                if(branch_taken==0 && curr_btb->prediction==1)
+                {
+                    flush_iq(cpu, curr_btb->target_pc);
+                    flush_lsq(cpu, curr_btb->target_pc);
+                    reset_rename_table_free_list(cpu, curr_btb->target_pc);
+                    // flush_rob(cpu, curr_btb->target_pc);
+
+                    flush_FU(cpu, &cpu->decode_rename1, curr_btb->target_pc);
+                    flush_FU(cpu, &cpu->rename2_dispatch, curr_btb->target_pc);
+                    flush_FU(cpu, &cpu->mul_fu1, curr_btb->target_pc);
+                    flush_FU(cpu, &cpu->mul_fu2, curr_btb->target_pc);
+                    flush_FU(cpu, &cpu->mul_fu3, curr_btb->target_pc);
+                    flush_FU(cpu, &cpu->mul_fu4, curr_btb->target_pc);
+                    flush_FU(cpu, &cpu->lop_fu, curr_btb->target_pc);
+
+                    cpu->fetch_from_next_cycle = TRUE;
+                    cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.pc + 4;
+                    cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
+                    /* Make sure fetch stage is enabled to start fetching from new PC */
+                    cpu->fetch.has_insn = TRUE;
+                    
+                }
+                else
+                    reset_rename_table_free_list(cpu, cpu->int_fu.pc);
+            }
+
         }
 
         else if(cpu->int_fu.opcode == OPCODE_BNZ)
         {
-            if (cpu->phy_regs[cpu->zero_flag]->reg_flag == 0)
+            BTB_ENTRY *curr_btb = ProbeBtb(cpu, cpu->int_fu.pc);
+                
+            int branch_taken=0;
+            if (cpu->phy_regs[cpu->int_fu.renamed_rs1]->reg_flag == 1)
             {
                 /* Calculate new PC, and send it to fetch unit */
-                // cpu->pc = cpu->int_fu.pc + cpu->int_fu.imm;
+                cpu->int_fu.result_buffer = cpu->int_fu.pc + cpu->int_fu.imm;
+                branch_taken=1;
+                if(branch_taken == curr_btb->prediction && curr_btb->target_pc>=0)
+                {
+                    print_stage_content("INT FU -->", &cpu->int_fu);
+                    cpu->int_fu.has_insn = FALSE;
+                    return;
+                }
                 
                 /* Since we are using reverse callbacks for pipeline stages, 
                     * this will prevent the new instruction from being fetched in the current cycle*/
-                // cpu->fetch_from_next_cycle = TRUE;
+                cpu->fetch_from_next_cycle = TRUE;
 
+                reset_rename_table_free_list(cpu, cpu->int_fu.pc);
                 /* Flush previous stages */
-                // if(cpu->decode.has_insn==TRUE)
-                // {
-                //     if(cpu->decode.rd!=-1)
-                //         cpu->regs_valid[cpu->decode.rd]++;
-                // }
-                // cpu->decode.has_insn = FALSE;
+                flush_iq(cpu, cpu->int_fu.pc);
+                flush_lsq(cpu, cpu->int_fu.pc);
+                // flush_rob(cpu, cpu->int_fu.pc);
 
+                flush_FU(cpu, &cpu->decode_rename1, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->rename2_dispatch, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu1, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu2, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu3, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu4, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->lop_fu, cpu->int_fu.pc);
+
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
                 /* Make sure fetch stage is enabled to start fetching from new PC */
-                // cpu->fetch.has_insn =  TRUE;
+                cpu->fetch.has_insn = TRUE;
+            }
+
+            if(curr_btb->target_pc==-1)
+                UpdateBtbEntry(cpu, cpu->int_fu.pc, cpu->int_fu.pc + cpu->int_fu.imm);
+            
+            if(branch_taken!=curr_btb->prediction && curr_btb->target_pc>=0)
+            {
+                if(branch_taken==0 && curr_btb->prediction==1)
+                {
+                    flush_iq(cpu, curr_btb->target_pc);
+                    flush_lsq(cpu, curr_btb->target_pc);
+                    reset_rename_table_free_list(cpu, curr_btb->target_pc);
+                    // flush_rob(cpu, curr_btb->target_pc);
+
+                    flush_FU(cpu, &cpu->decode_rename1, curr_btb->target_pc);
+                    flush_FU(cpu, &cpu->rename2_dispatch, curr_btb->target_pc);
+                    flush_FU(cpu, &cpu->mul_fu1, curr_btb->target_pc);
+                    flush_FU(cpu, &cpu->mul_fu2, curr_btb->target_pc);
+                    flush_FU(cpu, &cpu->mul_fu3, curr_btb->target_pc);
+                    flush_FU(cpu, &cpu->mul_fu4, curr_btb->target_pc);
+                    flush_FU(cpu, &cpu->lop_fu, curr_btb->target_pc);
+                    
+                    cpu->fetch_from_next_cycle = TRUE;
+                    cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.pc + 4;
+                    cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
+                    /* Make sure fetch stage is enabled to start fetching from new PC */
+                    cpu->fetch.has_insn = TRUE;
+                }
+                else
+                    reset_rename_table_free_list(cpu, cpu->int_fu.pc);
             }
         }
 
@@ -1008,6 +1305,52 @@ APEX_int_fu(APEX_CPU *cpu)
         {
             cpu->int_fu.result_buffer = cpu->int_fu.imm;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
+        }
+
+        else if(cpu->int_fu.opcode == OPCODE_JUMP)
+        {
+            if (TRUE)
+            {
+                /* Calculate new PC, and send it to fetch unit */
+                cpu->int_fu.result_buffer = cpu->int_fu.pc + cpu->int_fu.imm;
+                
+                /* Since we are using reverse callbacks for pipeline stages, 
+                    * this will prevent the new instruction from being fetched in the current cycle*/
+                cpu->fetch_from_next_cycle = TRUE;
+
+                reset_rename_table_free_list(cpu, cpu->int_fu.pc);
+                /* Flush previous stages */
+                flush_iq(cpu, cpu->int_fu.pc);
+                flush_lsq(cpu, cpu->int_fu.pc);
+                // flush_rob(cpu, cpu->int_fu.pc);
+
+                flush_FU(cpu, &cpu->decode_rename1, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->rename2_dispatch, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu1, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu2, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu3, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->mul_fu4, cpu->int_fu.pc);
+                flush_FU(cpu, &cpu->lop_fu, cpu->int_fu.pc);
+
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_value = cpu->int_fu.result_buffer;
+                cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
+                /* Make sure fetch stage is enabled to start fetching from new PC */
+                cpu->fetch.has_insn = TRUE;
+            }
+        }
+
+        else if(cpu->int_fu.opcode == OPCODE_CMP)
+        {
+            if(cpu->int_fu.rs1_value == cpu->int_fu.rs2_value)
+            {
+                cpu->int_fu.result_buffer = 0;
+            }
+            else
+            {
+                cpu->int_fu.result_buffer = 1;
+            }
+            cpu->phy_regs[cpu->int_fu.renamed_rd]->reg_flag = cpu->int_fu.result_buffer;
             cpu->phy_regs[cpu->int_fu.renamed_rd]->valid = 1;
         }
 
@@ -1046,13 +1389,12 @@ APEX_mul_fu1(APEX_CPU *cpu)
         if(cpu->mul_fu1.opcode == OPCODE_MUL)
         {
             cpu->mul_fu1.result_buffer = cpu->mul_fu1.rs1_value * cpu->mul_fu1.rs2_value;
-            cpu->phy_regs[cpu->mul_fu1.renamed_rd]->reg_value = cpu->mul_fu1.result_buffer;
             cpu->phy_regs[cpu->mul_fu1.renamed_rd]->valid = 0;
 
             if(cpu->mul_fu1.result_buffer == 0)
-                cpu->phy_regs[cpu->mul_fu1.renamed_rd]->reg_flag = 1;
-            else
                 cpu->phy_regs[cpu->mul_fu1.renamed_rd]->reg_flag = 0;
+            else
+                cpu->phy_regs[cpu->mul_fu1.renamed_rd]->reg_flag = 1;
             
             print_stage_content("MUL FU 1-->", &cpu->mul_fu1);
             if(cpu->mul_fu2.has_insn==FALSE)
@@ -1077,13 +1419,12 @@ APEX_mul_fu2(APEX_CPU *cpu)
         if(cpu->mul_fu2.opcode == OPCODE_MUL)
         {
             cpu->mul_fu2.result_buffer = cpu->mul_fu2.rs1_value * cpu->mul_fu2.rs2_value;
-            cpu->phy_regs[cpu->mul_fu2.renamed_rd]->reg_value = cpu->mul_fu2.result_buffer;
             cpu->phy_regs[cpu->mul_fu2.renamed_rd]->valid = 0;
 
             if(cpu->mul_fu2.result_buffer == 0)
-                cpu->phy_regs[cpu->mul_fu2.renamed_rd]->reg_flag = 1;
-            else
                 cpu->phy_regs[cpu->mul_fu2.renamed_rd]->reg_flag = 0;
+            else
+                cpu->phy_regs[cpu->mul_fu2.renamed_rd]->reg_flag = 1;
             
             print_stage_content("MUL FU 2-->", &cpu->mul_fu2);
             if(cpu->mul_fu3.has_insn==FALSE)
@@ -1107,13 +1448,12 @@ APEX_mul_fu3(APEX_CPU *cpu)
         if(cpu->mul_fu3.opcode == OPCODE_MUL)
         {
             cpu->mul_fu3.result_buffer = cpu->mul_fu3.rs1_value * cpu->mul_fu3.rs2_value;
-            cpu->phy_regs[cpu->mul_fu3.renamed_rd]->reg_value = cpu->mul_fu3.result_buffer;
             cpu->phy_regs[cpu->mul_fu3.renamed_rd]->valid = 0;
 
             if(cpu->mul_fu3.result_buffer == 0)
-                cpu->phy_regs[cpu->mul_fu3.renamed_rd]->reg_flag = 1;
-            else
                 cpu->phy_regs[cpu->mul_fu3.renamed_rd]->reg_flag = 0;
+            else
+                cpu->phy_regs[cpu->mul_fu3.renamed_rd]->reg_flag = 1;
             
             print_stage_content("MUL FU 3-->", &cpu->mul_fu3);
             if(cpu->mul_fu4.has_insn==FALSE)
@@ -1142,9 +1482,9 @@ APEX_mul_fu4(APEX_CPU *cpu)
             cpu->phy_regs[cpu->mul_fu4.renamed_rd]->valid = 1;
 
             if(cpu->mul_fu4.result_buffer == 0)
-                cpu->phy_regs[cpu->mul_fu4.renamed_rd]->reg_flag = 1;
-            else
                 cpu->phy_regs[cpu->mul_fu4.renamed_rd]->reg_flag = 0;
+            else
+                cpu->phy_regs[cpu->mul_fu4.renamed_rd]->reg_flag = 1;
             
             print_stage_content("MUL FU 4-->", &cpu->mul_fu4);
             cpu->mul_fu4.has_insn = FALSE;
@@ -1182,33 +1522,36 @@ APEX_lop_fu(APEX_CPU *cpu)
             cpu->lop_fu.result_buffer = cpu->lop_fu.rs1_value | cpu->lop_fu.rs2_value;
             cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = cpu->lop_fu.result_buffer;
             cpu->phy_regs[cpu->lop_fu.renamed_rd]->valid = 1;
+            cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_value = cpu->lop_fu.result_buffer;
 
             if(cpu->lop_fu.result_buffer == 0)
-                cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 1;
-            else
                 cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 0;
+            else
+                cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 1;
         }
         else if(cpu->lop_fu.opcode == OPCODE_AND)
         {
             cpu->lop_fu.result_buffer = cpu->lop_fu.rs1_value & cpu->lop_fu.rs2_value;
             cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = cpu->lop_fu.result_buffer;
             cpu->phy_regs[cpu->lop_fu.renamed_rd]->valid = 1;
+            cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_value = cpu->lop_fu.result_buffer;
 
             if(cpu->lop_fu.result_buffer == 0)
-                cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 1;
-            else
                 cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 0;
+            else
+                cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 1;
         }
         else if(cpu->lop_fu.opcode == OPCODE_XOR)
         {
             cpu->lop_fu.result_buffer = cpu->lop_fu.rs1_value ^ cpu->lop_fu.rs2_value;
             cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = cpu->lop_fu.result_buffer;
             cpu->phy_regs[cpu->lop_fu.renamed_rd]->valid = 1;
+            cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_value = cpu->lop_fu.result_buffer;
 
             if(cpu->lop_fu.result_buffer == 0)
-                cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 1;
-            else
                 cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 0;
+            else
+                cpu->phy_regs[cpu->lop_fu.renamed_rd]->reg_flag = 1;
         }
 
         print_stage_content("LOP FU -->", &cpu->lop_fu);
@@ -1279,7 +1622,7 @@ APEX_cpu_init(const char *filename)
         }
     }
 
-    for(i=0; i<PHY_REG_FILE_SIZE; i++)
+    for(i=0; i<PHY_REG_FILE_SIZE+1; i++)
     {
         cpu->phy_regs[i] = malloc(sizeof(APEX_PHY_REG));
         cpu->phy_regs[i]->reg_flag = -1;
@@ -1296,22 +1639,14 @@ APEX_cpu_init(const char *filename)
         cpu->arch_regs[i] = 0;
     }
 
-    for(i=8; i<PHY_REG_FILE_SIZE; i++)
+    for(i=0; i<PHY_REG_FILE_SIZE; i++)
     {
-        cpu->free_list[i] = -1;
-    }
-
-    for(i=8; i<=PHY_REG_FILE_SIZE; i++)
-    {
-        cpu->free_list[i-8] = i;
+        cpu->free_list[i] = i;
     }
 
     for(i=0; i<ARCH_REG_FILE_SIZE; i++)
     {
-        cpu->rename_table[i] = i;
-        cpu->phy_regs[i]->reg_flag = -1;
-        cpu->phy_regs[i]->valid = 1;
-        cpu->phy_regs[i]->reg_value = 0;
+        cpu->rename_table[i] = -1;
     }
 
     cpu->lsq_head = 0;
@@ -1322,7 +1657,9 @@ APEX_cpu_init(const char *filename)
     cpu->rob_tail = 0;
     cpu->fwd_req_list_idx = 0;
     cpu->free_list_head = 0;
-    cpu->free_list_tail = 7;
+    cpu->free_list_tail = 0;
+
+    cpu->rename_table[ARCH_REG_FILE_SIZE] = cpu->phy_regs[PHY_REG_FILE_SIZE]->reg_tag; // dummy registers for forwarding pc [never updated]
 
     /* Parse input file and create code memory */
     cpu->code_memory = create_code_memory(filename, &cpu->code_memory_size);
@@ -1352,6 +1689,7 @@ APEX_cpu_init(const char *filename)
 
     /* To start fetch stage */
     cpu->fetch.has_insn = TRUE;
+    cpu->clock=1;
     return cpu;
 }
 
@@ -1361,11 +1699,11 @@ APEX_cpu_init(const char *filename)
  * Note: You are free to edit this function according to your implementation
  */
 void
-APEX_cpu_run(APEX_CPU *cpu)
+APEX_cpu_run(APEX_CPU *cpu, int sim_mode, int cycles)
 {
     char user_prompt_val;
 
-    while (TRUE)
+    while (cpu->clock < cycles)
     {
         if (ENABLE_DEBUG_MESSAGES)
         {
@@ -1379,6 +1717,7 @@ APEX_cpu_run(APEX_CPU *cpu)
         if(CommitRobEntry(cpu))
         {
             //halt on rob's head
+            printf("APEX_CPU: Simulation Stopped, cycles = %d instructions = %d\n", cpu->clock, cpu->insn_completed);
             break;
         }
 
@@ -1401,17 +1740,6 @@ APEX_cpu_run(APEX_CPU *cpu)
         APEX_decode_rename1(cpu);
         APEX_fetch(cpu);
 
-        print_issue_q_entries(cpu);
-        print_rob_entries(cpu);
-        print_lsq_entries(cpu);
-        print_arch_reg_file(cpu);
-        print_phy_reg_file(cpu);
-        print_rename_table(cpu);
-        print_data_memory(cpu);
-        print_free_list(cpu);
-        print_fwd_bus(cpu);
-        
-
         if (cpu->single_step)
         {
             printf("Press any key to advance CPU Clock or <q> to quit:\n");
@@ -1426,6 +1754,15 @@ APEX_cpu_run(APEX_CPU *cpu)
 
         cpu->clock++;
     }
+    if(sim_mode==2)
+    {
+        print_issue_q_entries(cpu);
+        print_rob_entries(cpu);
+        print_lsq_entries(cpu);
+        print_btb_entries(cpu);
+    }
+    print_arch_reg_file(cpu);
+    print_data_memory(cpu);
 }
 
 /*

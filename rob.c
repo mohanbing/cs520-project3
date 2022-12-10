@@ -8,6 +8,29 @@ bool IsRobFree(APEX_CPU *cpu)
     return cpu->rob[cpu->rob_tail] == NULL;
 }
 
+void flush_rob(APEX_CPU* cpu, int pc)
+{
+    int i=cpu->rob_head;
+    int last_modified_idx = cpu->rob_tail;
+
+    while(i != cpu->rob_tail)
+    {
+        if(cpu->rob[i]!=NULL)
+        {
+            ROB_ENTRY *rob_entry = cpu->rob[i];
+            if(rob_entry->pc >= pc)
+            {
+                free(cpu->rob[i]);
+                cpu->rob[i] = NULL;
+                if(cpu->rob_head == i)
+                    cpu->rob_head = (cpu->rob_head+1)%ROB_SIZE;
+                last_modified_idx = i;
+            }
+        }
+        i = (i+1)%ROB_SIZE;
+    }
+    cpu->rob_tail = last_modified_idx;
+}
 
 
 int AddRobEntry(APEX_CPU *cpu, CPU_Stage *stage, int lsq_index)
@@ -20,6 +43,7 @@ int AddRobEntry(APEX_CPU *cpu, CPU_Stage *stage, int lsq_index)
     rob_entry->establised_bit = 1;
     rob_entry->instruction_type = stage->opcode; //store opcode value
     rob_entry->lsq_index = lsq_index;//shouldn't this be lsq tail?
+    rob_entry->prev_physical_rd = stage->prev_renamed_rd;
 
     int rob_idx = cpu->rob_tail;
     //add at the tail and inrement tail
@@ -31,6 +55,7 @@ int AddRobEntry(APEX_CPU *cpu, CPU_Stage *stage, int lsq_index)
 int DeleteRobEntry(APEX_CPU *cpu)
 {
     //delete from head and increment head
+    cpu->insn_completed++;
     free(cpu->rob[cpu->rob_head]);
     cpu->rob[cpu->rob_head] = NULL;
     cpu->rob_head = (cpu->rob_head + 1) % ROB_SIZE;
@@ -64,16 +89,13 @@ int CommitRobEntry(APEX_CPU *cpu)
             DeleteRobEntry(cpu);
         }        
     }
-    else if (opcode == OPCODE_STORE || opcode == OPCODE_STR)
+    else if (opcode == OPCODE_STORE || opcode == OPCODE_STR || opcode == OPCODE_BNZ ||
+             opcode == OPCODE_JUMP || opcode == OPCODE_BZ)
     {
         DeleteRobEntry(cpu);
     }
 
     add_phy_reg_free_list(cpu);
-    
-    //handle compare to update z flag
-    //return 1 
-
 
     //handle halt
     //return 1 or 0?
@@ -119,6 +141,7 @@ int CommitRobEntry(APEX_CPU *cpu)
 
         free(cpu->lsq[lsq_index]);
         cpu->lsq[lsq_index] = NULL;
+
         // DeleteRobEntry(cpu);
         // add_phy_reg_free_list(cpu, cpu->rob[cpu->rob_head]->physical_rd);
     }   
@@ -128,5 +151,4 @@ int CommitRobEntry(APEX_CPU *cpu)
 
 void PrintRobContents(APEX_CPU *cpu)
 {
-
 }
