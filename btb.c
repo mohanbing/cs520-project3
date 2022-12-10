@@ -44,7 +44,7 @@ void AddBtbEntry(APEX_CPU *cpu, int pc)
         DeleteBtbEntry(cpu);
         BTB_ENTRY *btb_entry = (BTB_ENTRY*)(malloc(sizeof(BTB_ENTRY)));
         btb_entry->prediction = cpu->decode_rename1.imm < 0 ? TRUE : FALSE;
-        btb_entry->pc = cpu->pc;
+        btb_entry->pc = pc;
         btb_entry->target_pc = -1;
 
         cpu->btb[cpu->btb_tail] = btb_entry;

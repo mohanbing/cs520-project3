@@ -88,7 +88,8 @@ int CommitRobEntry(APEX_CPU *cpu)
             DeleteRobEntry(cpu);
         }        
     }
-    else if (opcode == OPCODE_STORE || opcode == OPCODE_STR)
+    else if (opcode == OPCODE_STORE || opcode == OPCODE_STR || opcode == OPCODE_BNZ ||
+             opcode == OPCODE_JUMP || opcode == OPCODE_BZ)
     {
         DeleteRobEntry(cpu);
     }
@@ -139,6 +140,7 @@ int CommitRobEntry(APEX_CPU *cpu)
 
         free(cpu->lsq[lsq_index]);
         cpu->lsq[lsq_index] = NULL;
+
         // DeleteRobEntry(cpu);
         // add_phy_reg_free_list(cpu, cpu->rob[cpu->rob_head]->physical_rd);
     }   
