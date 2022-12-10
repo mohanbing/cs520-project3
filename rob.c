@@ -55,6 +55,7 @@ int AddRobEntry(APEX_CPU *cpu, CPU_Stage *stage, int lsq_index)
 int DeleteRobEntry(APEX_CPU *cpu)
 {
     //delete from head and increment head
+    cpu->insn_completed++;
     free(cpu->rob[cpu->rob_head]);
     cpu->rob[cpu->rob_head] = NULL;
     cpu->rob_head = (cpu->rob_head + 1) % ROB_SIZE;

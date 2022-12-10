@@ -225,6 +225,6 @@ typedef struct APEX_CPU
 
 APEX_Instruction *create_code_memory(const char *filename, int *size);
 APEX_CPU *APEX_cpu_init(const char *filename);
-void APEX_cpu_run(APEX_CPU *cpu);
+void APEX_cpu_run(APEX_CPU *cpu, int mode, int cycles);
 void APEX_cpu_stop(APEX_CPU *cpu);
 #endif

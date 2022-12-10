@@ -16,6 +16,8 @@
 #define ARCH_REG_FILE_SIZE 8
 #define PHY_REG_FILE_SIZE 15
 
+#define INT_MAX 2147483647
+
 #define ROB_SIZE 12
 #define LSQ_SIZE 4
 #define IQ_SIZE 8

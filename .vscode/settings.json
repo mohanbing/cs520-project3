@@ -5,6 +5,7 @@
   "files.associations": {
     "stdio.h": "c",
     "stdbool.h": "c",
-    "apex_macros.h": "c"
+    "apex_macros.h": "c",
+    "climits": "c"
   }
 }

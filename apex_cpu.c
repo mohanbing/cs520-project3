@@ -41,51 +41,51 @@ print_data_memory(APEX_CPU *cpu)
     }
 }
 
-static void
-print_rename_table(APEX_CPU *cpu)
-{
-    printf("================RENAME TABLE================\n");
-    int i;
-    for(i=0; i<ARCH_REG_FILE_SIZE; i++)
-    {
-        printf("| \t ARCH REG [%d] \t | \t PHY REG = %d \t |\n", i, cpu->rename_table[i]);
-    }
-}
+// static void
+// print_rename_table(APEX_CPU *cpu)
+// {
+//     printf("================RENAME TABLE================\n");
+//     int i;
+//     for(i=0; i<ARCH_REG_FILE_SIZE; i++)
+//     {
+//         printf("| \t ARCH REG [%d] \t | \t PHY REG = %d \t |\n", i, cpu->rename_table[i]);
+//     }
+// }
 
-static void
-print_free_list(APEX_CPU *cpu)
-{
-    printf("================FREE LIST================\n");
-    int i;
-    for(i=0; i<PHY_REG_FILE_SIZE; i++)
-    {
-        if(i==cpu->free_list_head && cpu->free_list_head == cpu->free_list_tail)
-        {
-            printf("HEAD TAIL---> %d\n", cpu->free_list[i]);
-        }
-        else if(i==cpu->free_list_head)
-        {
-            printf("HEAD ---> %d\n", cpu->free_list[i]);
-        }
-        else if(i==cpu->free_list_tail)
-        {
-            printf("TAIL ---> %d\n", cpu->free_list[i]);
-        }
-        else
-            printf("%d\n", cpu->free_list[i]);
-    }
-}
+// static void
+// print_free_list(APEX_CPU *cpu)
+// {
+//     printf("================FREE LIST================\n");
+//     int i;
+//     for(i=0; i<PHY_REG_FILE_SIZE; i++)
+//     {
+//         if(i==cpu->free_list_head && cpu->free_list_head == cpu->free_list_tail)
+//         {
+//             printf("HEAD TAIL---> %d\n", cpu->free_list[i]);
+//         }
+//         else if(i==cpu->free_list_head)
+//         {
+//             printf("HEAD ---> %d\n", cpu->free_list[i]);
+//         }
+//         else if(i==cpu->free_list_tail)
+//         {
+//             printf("TAIL ---> %d\n", cpu->free_list[i]);
+//         }
+//         else
+//             printf("%d\n", cpu->free_list[i]);
+//     }
+// }
 
-static void
-print_fwd_bus(APEX_CPU *cpu)
-{
-    printf("================FORWARDING BUS================\n");
-    int i;
-    for(i=0; i<PHY_REG_FILE_SIZE+1; i++)
-    {
-        printf("IDX: [%d] TAG VALID: [%d] DATA VALUE [%d]\n", i, cpu->forwarding_bus[i].tag_valid, cpu->forwarding_bus[i].data_value);
-    }
-}
+// static void
+// print_fwd_bus(APEX_CPU *cpu)
+// {
+//     printf("================FORWARDING BUS================\n");
+//     int i;
+//     for(i=0; i<PHY_REG_FILE_SIZE+1; i++)
+//     {
+//         printf("IDX: [%d] TAG VALID: [%d] DATA VALUE [%d]\n", i, cpu->forwarding_bus[i].tag_valid, cpu->forwarding_bus[i].data_value);
+//     }
+// }
 
 static void
 print_issue_q_entries(APEX_CPU *cpu)
@@ -95,7 +95,17 @@ print_issue_q_entries(APEX_CPU *cpu)
     for(i=0; i<IQ_SIZE; i++)
     {
         if(cpu->iq[i]!=NULL)
-            printf("[ I%d ]", ((cpu->iq[i]->pc-4000)/4));
+        {
+            if(cpu->iq_head == cpu->iq_tail)
+                printf("HEAD & TAIL --> [ I%d ]", ((cpu->iq[i]->pc-4000)/4));
+            else if(cpu->iq_head)
+                printf("HEAD --> [ I%d ]", ((cpu->iq[i]->pc-4000)/4));
+            else if(cpu->iq_tail)
+                printf("TAIL --> [ I%d ]", ((cpu->iq[i]->pc-4000)/4));
+            else
+                printf("[ I%d ]", ((cpu->iq[i]->pc-4000)/4));
+        }
+            
     }
     printf("\n");
 }
@@ -108,7 +118,16 @@ print_rob_entries(APEX_CPU *cpu)
     for(i=0; i<ROB_SIZE; i++)
     {
         if(cpu->rob[i]!=NULL)
-            printf("[ I%d ]", ((cpu->rob[i]->pc-4000)/4));
+        {
+            if(cpu->rob_head == cpu->rob_tail)
+                printf("HEAD & TAIL --> [ I%d ]", ((cpu->rob[i]->pc-4000)/4));
+            else if(cpu->rob_head)
+                printf("HEAD --> [ I%d ]", ((cpu->rob[i]->pc-4000)/4));
+            else if(cpu->rob_tail)
+                printf("TAIL --> [ I%d ]", ((cpu->rob[i]->pc-4000)/4));
+            else
+                printf("[ I%d ]", ((cpu->rob[i]->pc-4000)/4));
+        }
     }
     printf("\n");
 }
@@ -121,9 +140,33 @@ print_lsq_entries(APEX_CPU *cpu)
     for(i=0; i<LSQ_SIZE; i++)
     {
         if(cpu->lsq[i]!=NULL)
-            printf("[ I%d ]", ((cpu->lsq[i]->pc-4000)/4));
+        {
+            if(cpu->lsq_head == cpu->lsq_tail)
+                printf("HEAD & TAIL --> [ I%d ]", ((cpu->lsq[i]->pc-4000)/4));
+            else if(cpu->rob_head)
+                printf("HEAD --> [ I%d ]", ((cpu->lsq[i]->pc-4000)/4));
+            else if(cpu->rob_tail)
+                printf("TAIL --> [ I%d ]", ((cpu->lsq[i]->pc-4000)/4));
+            else
+                printf("[ I%d ]", ((cpu->lsq[i]->pc-4000)/4));
+        }
     }
     printf("\n");
+}
+
+static void
+print_btb_entries(APEX_CPU *cpu)
+{
+    printf("================BTB Cache================\n");
+    int i;
+    for(i=0; i<BTB_SIZE; i++)
+    {
+        if(cpu->btb[i]!=NULL)
+        {
+            printf("Prediction : %d | Target Addr : %d | I%d (%d)", cpu->btb[i]->prediction, cpu->btb[i]->target_pc, (cpu->btb[i]->pc-4000)/4, cpu->btb[i]->pc);
+            printf("==================================\n");
+        }
+    }
 }
 
 static void
@@ -298,18 +341,18 @@ print_arch_reg_file(const APEX_CPU *cpu)
     }
 }
 
-static void
-print_phy_reg_file(const APEX_CPU *cpu)
-{
-    printf("----------\n%s\n----------\n", "State of Physical Register File");
-    int i;
-    for (i = 0; i < PHY_REG_FILE_SIZE ; ++i)
-    {
-        printf("P%-3d\tValue:[%-3d] \t Flag: [%d] \t Valid: [%d]", i, cpu->phy_regs[i]->reg_value, cpu->phy_regs[i]->reg_flag, 
-                    cpu->phy_regs[i]->valid);
-        printf("\n");
-    }
-}
+// static void
+// print_phy_reg_file(const APEX_CPU *cpu)
+// {
+//     printf("----------\n%s\n----------\n", "State of Physical Register File");
+//     int i;
+//     for (i = 0; i < PHY_REG_FILE_SIZE ; ++i)
+//     {
+//         printf("P%-3d\tValue:[%-3d] \t Flag: [%d] \t Valid: [%d]", i, cpu->phy_regs[i]->reg_value, cpu->phy_regs[i]->reg_flag, 
+//                     cpu->phy_regs[i]->valid);
+//         printf("\n");
+//     }
+// }
 
 /*
  * Fetch Stage of APEX Pipeline
@@ -964,9 +1007,12 @@ reset_rename_table_free_list(APEX_CPU *cpu, int pc)
             cpu->phy_regs[rob_entry->physical_rd]->renamed_bit = 0;
             
             //add back the removed phy reg back to free list
-            cpu->free_list[cpu->free_list_tail] = rob_entry->physical_rd;
+            if(rob_entry->physical_rd < PHY_REG_FILE_SIZE)  // does not add the dummy phy regs
+            {
+                            cpu->free_list[cpu->free_list_tail] = rob_entry->physical_rd;
             cpu->free_list_tail++;
             cpu->free_list_tail = cpu->free_list_tail%PHY_REG_FILE_SIZE;
+            }
         }
         free(rob_entry);
         cpu->rob[tail] = NULL;
@@ -1023,8 +1069,8 @@ APEX_rename2_dispatch(APEX_CPU *cpu)
         {
             if(is_iq_free(cpu) && IsRobFree(cpu))
             {
-                int issue_q_idx = insert_iq_entry(cpu, &cpu->rename2_dispatch);
-                int rob_idx = AddRobEntry(cpu, &cpu->rename2_dispatch, -1);
+                insert_iq_entry(cpu, &cpu->rename2_dispatch);
+                AddRobEntry(cpu, &cpu->rename2_dispatch, -1);
                 cpu->rename2_dispatch.has_insn = FALSE;
             }
         }
@@ -1272,7 +1318,7 @@ APEX_int_fu(APEX_CPU *cpu)
                 /* Since we are using reverse callbacks for pipeline stages, 
                     * this will prevent the new instruction from being fetched in the current cycle*/
                 cpu->fetch_from_next_cycle = TRUE;
-                
+
                 reset_rename_table_free_list(cpu, cpu->int_fu.pc);
                 /* Flush previous stages */
                 flush_iq(cpu, cpu->int_fu.pc);
@@ -1653,11 +1699,11 @@ APEX_cpu_init(const char *filename)
  * Note: You are free to edit this function according to your implementation
  */
 void
-APEX_cpu_run(APEX_CPU *cpu)
+APEX_cpu_run(APEX_CPU *cpu, int sim_mode, int cycles)
 {
     char user_prompt_val;
 
-    while (TRUE)
+    while (cpu->clock < cycles)
     {
         if (ENABLE_DEBUG_MESSAGES)
         {
@@ -1671,6 +1717,7 @@ APEX_cpu_run(APEX_CPU *cpu)
         if(CommitRobEntry(cpu))
         {
             //halt on rob's head
+            printf("APEX_CPU: Simulation Stopped, cycles = %d instructions = %d\n", cpu->clock, cpu->insn_completed);
             break;
         }
 
@@ -1693,17 +1740,6 @@ APEX_cpu_run(APEX_CPU *cpu)
         APEX_decode_rename1(cpu);
         APEX_fetch(cpu);
 
-        print_issue_q_entries(cpu);
-        print_rob_entries(cpu);
-        print_lsq_entries(cpu);
-        print_arch_reg_file(cpu);
-        print_phy_reg_file(cpu);
-        print_rename_table(cpu);
-        print_data_memory(cpu);
-        print_free_list(cpu);
-        print_fwd_bus(cpu);
-        
-
         if (cpu->single_step)
         {
             printf("Press any key to advance CPU Clock or <q> to quit:\n");
@@ -1718,6 +1754,15 @@ APEX_cpu_run(APEX_CPU *cpu)
 
         cpu->clock++;
     }
+    if(sim_mode==2)
+    {
+        print_issue_q_entries(cpu);
+        print_rob_entries(cpu);
+        print_lsq_entries(cpu);
+        print_btb_entries(cpu);
+    }
+    print_arch_reg_file(cpu);
+    print_data_memory(cpu);
 }
 
 /*
