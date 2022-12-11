@@ -26,5 +26,5 @@ An Out-of-Processor using register renaming with Centralized issue queue, LSQ an
 ## TEAM
 
 - Aditya Mohan (B00929373)
-- Ishan Vardhan
-- Rajat Nipane
+- Ishan Vardhan (B00854391)
+- Rajat Nipane (B00931099)
