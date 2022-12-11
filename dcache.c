@@ -31,6 +31,8 @@ int CommitLoadStoreInstr(APEX_CPU *cpu)
                 cpu->dcache.rs3_value = cpu->forwarding_bus[cpu->dcache.renamed_rs3].data_value;
         }
 
+        decrement_vcount(cpu, cpu->dcache.renamed_rs1, cpu->dcache.renamed_rs2, cpu->dcache.renamed_rs3);
+
         switch (cpu->dcache.opcode)
         {
             case OPCODE_LDR:

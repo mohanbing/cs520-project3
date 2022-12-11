@@ -5,3 +5,4 @@ apex_sim
 *.db
 .vscode
 .gitignore
+*.asm

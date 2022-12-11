@@ -41,40 +41,40 @@ print_data_memory(APEX_CPU *cpu)
     }
 }
 
-// static void
-// print_rename_table(APEX_CPU *cpu)
-// {
-//     printf("================RENAME TABLE================\n");
-//     int i;
-//     for(i=0; i<ARCH_REG_FILE_SIZE; i++)
-//     {
-//         printf("| \t ARCH REG [%d] \t | \t PHY REG = %d \t |\n", i, cpu->rename_table[i]);
-//     }
-// }
+static void
+print_rename_table(APEX_CPU *cpu)
+{
+    printf("================RENAME TABLE================\n");
+    int i;
+    for(i=0; i<ARCH_REG_FILE_SIZE; i++)
+    {
+        printf("| \t ARCH REG [%d] \t | \t PHY REG = %d \t |\n", i, cpu->rename_table[i]);
+    }
+}
 
-// static void
-// print_free_list(APEX_CPU *cpu)
-// {
-//     printf("================FREE LIST================\n");
-//     int i;
-//     for(i=0; i<PHY_REG_FILE_SIZE; i++)
-//     {
-//         if(i==cpu->free_list_head && cpu->free_list_head == cpu->free_list_tail)
-//         {
-//             printf("HEAD TAIL---> %d\n", cpu->free_list[i]);
-//         }
-//         else if(i==cpu->free_list_head)
-//         {
-//             printf("HEAD ---> %d\n", cpu->free_list[i]);
-//         }
-//         else if(i==cpu->free_list_tail)
-//         {
-//             printf("TAIL ---> %d\n", cpu->free_list[i]);
-//         }
-//         else
-//             printf("%d\n", cpu->free_list[i]);
-//     }
-// }
+static void
+print_free_list(APEX_CPU *cpu)
+{
+    printf("================FREE LIST================\n");
+    int i;
+    for(i=0; i<PHY_REG_FILE_SIZE; i++)
+    {
+        if(i==cpu->free_list_head && cpu->free_list_head == cpu->free_list_tail)
+        {
+            printf("HEAD TAIL---> %d\n", cpu->free_list[i]);
+        }
+        else if(i==cpu->free_list_head)
+        {
+            printf("HEAD ---> %d\n", cpu->free_list[i]);
+        }
+        else if(i==cpu->free_list_tail)
+        {
+            printf("TAIL ---> %d\n", cpu->free_list[i]);
+        }
+        else
+            printf("%d\n", cpu->free_list[i]);
+    }
+}
 
 // static void
 // print_fwd_bus(APEX_CPU *cpu)
@@ -96,11 +96,11 @@ print_issue_q_entries(APEX_CPU *cpu)
     {
         if(cpu->iq[i]!=NULL)
         {
-            if(cpu->iq_head == cpu->iq_tail)
+            if(i==cpu->iq_head && i == cpu->iq_tail)
                 printf("HEAD & TAIL --> [ I%d ]", ((cpu->iq[i]->pc-4000)/4));
-            else if(cpu->iq_head)
+            else if(i==cpu->iq_head)
                 printf("HEAD --> [ I%d ]", ((cpu->iq[i]->pc-4000)/4));
-            else if(cpu->iq_tail)
+            else if(i==cpu->iq_tail)
                 printf("TAIL --> [ I%d ]", ((cpu->iq[i]->pc-4000)/4));
             else
                 printf("[ I%d ]", ((cpu->iq[i]->pc-4000)/4));
@@ -119,11 +119,11 @@ print_rob_entries(APEX_CPU *cpu)
     {
         if(cpu->rob[i]!=NULL)
         {
-            if(cpu->rob_head == cpu->rob_tail)
+            if(i==cpu->rob_head && i == cpu->rob_tail)
                 printf("HEAD & TAIL --> [ I%d ]", ((cpu->rob[i]->pc-4000)/4));
-            else if(cpu->rob_head)
+            else if(i==cpu->rob_head)
                 printf("HEAD --> [ I%d ]", ((cpu->rob[i]->pc-4000)/4));
-            else if(cpu->rob_tail)
+            else if(i==cpu->rob_tail)
                 printf("TAIL --> [ I%d ]", ((cpu->rob[i]->pc-4000)/4));
             else
                 printf("[ I%d ]", ((cpu->rob[i]->pc-4000)/4));
@@ -382,7 +382,13 @@ APEX_fetch(APEX_CPU *cpu)
 
         /* Index into code memory using this pc and copy all instruction fields
          * into fetch latch  */
-        current_ins = &cpu->code_memory[get_code_memory_index_from_pc(cpu->pc)];
+        if((cpu->pc-4000)/4 < cpu->code_memory_size)
+            current_ins = &cpu->code_memory[get_code_memory_index_from_pc(cpu->pc)];
+        else
+        {
+            print_stage_content("Fetch", NULL);
+            return;
+        }
         strcpy(cpu->fetch.opcode_str, current_ins->opcode_str);
         cpu->fetch.opcode = current_ins->opcode;
         cpu->fetch.rd = current_ins->rd;
@@ -842,6 +848,7 @@ APEX_decode_rename1(APEX_CPU *cpu)
                         cpu->decode_rename1.rs1_value = cpu->phy_regs[cpu->decode_rename1.renamed_rs1]->reg_value;
                 }
 
+                cpu->decode_rename1.prev_renamed_rd = cpu->rename_table[cpu->decode_rename1.rd];
                 cpu->decode_rename1.renamed_rd=cpu->rename_table[cpu->decode_rename1.rd];
                 insn_renamed=1;
                 break;
@@ -1100,6 +1107,7 @@ APEX_int_fu(APEX_CPU *cpu)
                 cpu->int_fu.rs1_value = cpu->phy_regs[cpu->int_fu.renamed_rs1]->reg_value;
             else
                 cpu->int_fu.rs1_value = cpu->forwarding_bus[cpu->int_fu.renamed_rs1].data_value;
+
         }
 
         if(cpu->int_fu.renamed_rs2 != -1)
@@ -1108,7 +1116,10 @@ APEX_int_fu(APEX_CPU *cpu)
                 cpu->int_fu.rs2_value = cpu->phy_regs[cpu->int_fu.renamed_rs2]->reg_value;
             else
                 cpu->int_fu.rs2_value = cpu->forwarding_bus[cpu->int_fu.renamed_rs2].data_value;
+            
         }
+
+        decrement_vcount(cpu, cpu->int_fu.renamed_rs1, cpu->int_fu.renamed_rs2, cpu->int_fu.renamed_rs3);
 
         if(cpu->int_fu.opcode == OPCODE_ADD)
         {
@@ -1313,7 +1324,7 @@ APEX_int_fu(APEX_CPU *cpu)
             if (TRUE)
             {
                 /* Calculate new PC, and send it to fetch unit */
-                cpu->int_fu.result_buffer = cpu->int_fu.pc + cpu->int_fu.imm;
+                cpu->int_fu.result_buffer = cpu->int_fu.rs1_value + cpu->int_fu.imm;
                 
                 /* Since we are using reverse callbacks for pipeline stages, 
                     * this will prevent the new instruction from being fetched in the current cycle*/
@@ -1385,6 +1396,8 @@ APEX_mul_fu1(APEX_CPU *cpu)
             else
                 cpu->mul_fu1.rs2_value = cpu->forwarding_bus[cpu->mul_fu1.renamed_rs2].data_value;
         }
+
+        decrement_vcount(cpu, cpu->mul_fu1.renamed_rs1, cpu->mul_fu1.renamed_rs2, cpu->mul_fu1.renamed_rs3);
 
         if(cpu->mul_fu1.opcode == OPCODE_MUL)
         {
@@ -1516,6 +1529,8 @@ APEX_lop_fu(APEX_CPU *cpu)
             else
                 cpu->lop_fu.rs2_value = cpu->forwarding_bus[cpu->lop_fu.renamed_rs2].data_value;
         }
+
+        decrement_vcount(cpu, cpu->lop_fu.renamed_rs1, cpu->lop_fu.renamed_rs2, cpu->lop_fu.renamed_rs3);
 
         if(cpu->lop_fu.opcode == OPCODE_OR)
         {
@@ -1721,6 +1736,7 @@ APEX_cpu_run(APEX_CPU *cpu, int sim_mode, int cycles)
             break;
         }
 
+
         APEX_int_fu(cpu);
         APEX_dcache(cpu);
         APEX_mul_fu4(cpu);
@@ -1739,6 +1755,12 @@ APEX_cpu_run(APEX_CPU *cpu, int sim_mode, int cycles)
         APEX_rename2_dispatch(cpu);
         APEX_decode_rename1(cpu);
         APEX_fetch(cpu);
+
+        print_arch_reg_file(cpu);
+        print_issue_q_entries(cpu);
+        print_rob_entries(cpu);
+        print_rename_table(cpu);
+        print_free_list(cpu);
 
         if (cpu->single_step)
         {
