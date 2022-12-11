@@ -69,6 +69,8 @@ typedef struct IQ_Entry
     char fu_type[128];
     int imm;
 
+    int entry_clock_cycle;
+
     //physical(renamed) registers
     int src1_valid;
     int src2_valid;

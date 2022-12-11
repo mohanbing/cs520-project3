@@ -90,7 +90,7 @@ int CommitRobEntry(APEX_CPU *cpu)
         }        
     }
     else if (opcode == OPCODE_STORE || opcode == OPCODE_STR || opcode == OPCODE_BNZ ||
-             opcode == OPCODE_JUMP || opcode == OPCODE_BZ)
+             opcode == OPCODE_JUMP || opcode == OPCODE_BZ || opcode == OPCODE_NOP)
     {
         DeleteRobEntry(cpu);
     }

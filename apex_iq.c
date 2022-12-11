@@ -104,7 +104,7 @@ CPU_Stage* issue_iq(APEX_CPU* cpu, char* fu_type) //
 
     if(strcmp(fu_type,"IntFU")==0)
     {
-        if(cpu->mul_fu1.has_insn==FALSE)
+        if(cpu->int_fu.has_insn==FALSE)
         {
             return &(cpu->int_fu);
         }
@@ -113,7 +113,7 @@ CPU_Stage* issue_iq(APEX_CPU* cpu, char* fu_type) //
 
     if(strcmp(fu_type,"LopFU")==0)
     {
-        if(cpu->mul_fu1.has_insn==FALSE)
+        if(cpu->lop_fu.has_insn==FALSE)
         {
             return &(cpu->lop_fu);
         }
@@ -138,7 +138,6 @@ void flush_iq(APEX_CPU* cpu, int pc)
             IQ_Entry *iq_entry = cpu->iq[i];
             if(cpu->iq[i]->pc >= pc)
             {
-                decrement_vcount(cpu, iq_entry->src1_tag, iq_entry->src2_tag, iq_entry->src3_tag);
                 decrement_ccount(cpu, iq_entry->dst_tag, iq_entry->opcode);
 
                 free(cpu->iq[i]);
@@ -257,7 +256,6 @@ selection_logic(APEX_CPU *cpu)
                     char fu_type[10];
                     strcpy(fu_type, iq_entry->fu_type);
 
-                    decrement_vcount(cpu, fu_stage->renamed_rs1, fu_stage->renamed_rs2, fu_stage->renamed_rs3);
                     decrement_ccount(cpu, fu_stage->renamed_rd, fu_stage->opcode);
 
                     if(fu_stage->rd != -1 && fu_stage->opcode!=OPCODE_MUL)
@@ -266,13 +264,32 @@ selection_logic(APEX_CPU *cpu)
                     }
                     
                     // deletes entry from issue queue after swapping
-                    IQ_Entry *temp = cpu->iq[cpu->iq_tail-1];
                     free(iq_entry);
-                    cpu->iq[i]=temp;
-                    cpu->iq_tail--;
-                    cpu->iq[cpu->iq_tail]=NULL;
+                    cpu->iq[i]=NULL;
                 }
             }
         }
     }
+    IQ_Entry *temp[IQ_SIZE];
+    int j=0;
+    for(j=0; j<IQ_SIZE; j++)
+    {
+        temp[j]=NULL;
+    }
+    int idx=0;
+    for(j=0; j<IQ_SIZE; j++)
+    {
+        if(cpu->iq[j]!=NULL)
+        {
+            temp[idx] = cpu->iq[j];
+            idx++;
+        }
+    }
+
+    for(j=0; j<IQ_SIZE; j++)
+    {
+        cpu->iq[j] = temp[j];
+    }
+    cpu->iq_head = 0;
+    cpu->iq_tail = idx;
 }
